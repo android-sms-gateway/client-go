@@ -7,14 +7,20 @@ const (
 	EventTypeSmsReceived EventType = "sms:received"
 	// Triggered when an SMS is sent.
 	EventTypeSmsSent EventType = "sms:sent"
+	// Triggered when an SMS is delivered.
+	EventTypeSmsDelivered EventType = "sms:delivered"
+	// Triggered when an SMS processing fails.
+	EventTypeSmsFailed EventType = "sms:failed"
 	// Triggered when the device pings the server.
 	EventTypeSystemPing EventType = "system:ping"
 )
 
 var allEventTypes = map[EventType]struct{}{
-	EventTypeSmsReceived: {},
-	EventTypeSmsSent:     {},
-	EventTypeSystemPing:  {},
+	EventTypeSmsReceived:  {},
+	EventTypeSmsSent:      {},
+	EventTypeSmsDelivered: {},
+	EventTypeSmsFailed:    {},
+	EventTypeSystemPing:   {},
 }
 
 // IsValid checks if the given event type is valid.
