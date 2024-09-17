@@ -9,11 +9,11 @@ import (
 	"strings"
 )
 
-const BASE_URL = "https://sms.capcom.me/api/3rdparty/v1"
+const BASE_URL = "https://api.sms-gate.app/3rdparty/v1"
 
 type Config struct {
 	Client   *http.Client // Optional HTTP Client, defaults to `http.DefaultClient`
-	BaseURL  string       // Optional base URL, defaults to `https://sms.capcom.me/api/3rdparty/v1`
+	BaseURL  string       // Optional base URL, defaults to `https://api.sms-gate.app/3rdparty/v1`
 	User     string       // Required username
 	Password string       // Required password
 }

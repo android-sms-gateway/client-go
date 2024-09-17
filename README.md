@@ -1,4 +1,4 @@
-# Android SMS Gateway Go API Client
+# SMS Gateway for Android™ Go API Client
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/android-sms-gateway/client-go)](https://goreportcard.com/report/github.com/android-sms-gateway/client-go)
 [![GoDoc](https://godoc.org/github.com/android-sms-gateway/client-go?status.svg)](https://godoc.org/github.com/android-sms-gateway/client-go)
@@ -10,7 +10,7 @@
 ![GitHub All Releases](https://img.shields.io/github/downloads/android-sms-gateway/client-go/total)
 [![GitHub issues](https://img.shields.io/github/issues/android-sms-gateway/client-go)](https://github.com/android-sms-gateway/client-go/issues)
 
-This is a Go client library for interfacing with the [Android SMS Gateway API](https://sms.capcom.me).
+This is a Go client library for interfacing with the [SMS Gateway for Android API](https://sms-gate.app).
 
 ## Features
 
@@ -89,7 +89,7 @@ func main() {
 
 ## API Reference
 
-For more information on the API endpoints and data structures, please consult the [Android SMS Gateway API documentation](https://sms.capcom.me/api/).
+For more information on the API endpoints and data structures, please consult the [SMS Gateway for Android API documentation](https://sms-gate.app/api).
 
 # Contributing
 
