@@ -36,7 +36,7 @@ type Device struct {
 type Message struct {
 	ID                 string   `json:"id,omitempty" validate:"omitempty,max=36" example:"PyDmBQZZXYmyxMwED8Fzy"`                          // ID (if not set - will be generated)
 	Message            string   `json:"message" validate:"required,max=65535" example:"Hello World!"`                                      // Content
-	SimNumber          *uint8   `json:"simNumber,omitempty" validate:"omitempty,max=3" example:"1"`                                        // SIM card number (1-3)
+	SimNumber          *uint8   `json:"simNumber,omitempty" validate:"omitempty,max=3" example:"1"`                                        // SIM card number (1-3), if not set - default SIM will be used
 	WithDeliveryReport *bool    `json:"withDeliveryReport,omitempty" example:"true"`                                                       // With delivery report
 	IsEncrypted        bool     `json:"isEncrypted,omitempty" example:"true"`                                                              // Is encrypted
 	PhoneNumbers       []string `json:"phoneNumbers" validate:"required,min=1,max=100,dive,required,min=10,max=128" example:"79990001234"` // Recipients (phone numbers)
