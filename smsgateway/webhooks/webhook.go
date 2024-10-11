@@ -1,45 +1,27 @@
 package webhooks
 
-type EventType string
+import "github.com/android-sms-gateway/client-go/smsgateway"
+
+// Deprecated: use smsgateway package instead.
+type EventType = smsgateway.WebhookEvent
 
 const (
-	// Triggered when an SMS is received.
-	EventTypeSmsReceived EventType = "sms:received"
-	// Triggered when an SMS is sent.
-	EventTypeSmsSent EventType = "sms:sent"
-	// Triggered when an SMS is delivered.
-	EventTypeSmsDelivered EventType = "sms:delivered"
-	// Triggered when an SMS processing fails.
-	EventTypeSmsFailed EventType = "sms:failed"
-	// Triggered when the device pings the server.
-	EventTypeSystemPing EventType = "system:ping"
+	// Deprecated: use smsgateway package instead.
+	EventTypeSmsReceived EventType = smsgateway.WebhookEventSmsReceived
+	// Deprecated: use smsgateway package instead.
+	EventTypeSmsSent EventType = smsgateway.WebhookEventSmsSent
+	// Deprecated: use smsgateway package instead.
+	EventTypeSmsDelivered EventType = smsgateway.WebhookEventSmsDelivered
+	// Deprecated: use smsgateway package instead.
+	EventTypeSmsFailed EventType = smsgateway.WebhookEventSmsFailed
+	// Deprecated: use smsgateway package instead.
+	EventTypeSystemPing EventType = smsgateway.WebhookEventSystemPing
 )
 
-var allEventTypes = map[EventType]struct{}{
-	EventTypeSmsReceived:  {},
-	EventTypeSmsSent:      {},
-	EventTypeSmsDelivered: {},
-	EventTypeSmsFailed:    {},
-	EventTypeSystemPing:   {},
-}
-
-// IsValid checks if the given event type is valid.
-//
-// e is the event type to be checked.
-// Returns true if the event type is valid, false otherwise.
+// Deprecated: use smsgateway package instead.
 func IsValidEventType(e EventType) bool {
-	_, ok := allEventTypes[e]
-	return ok
+	return smsgateway.IsValidWebhookEvent(e)
 }
 
-// A webhook configuration.
-type Webhook struct {
-	// The unique identifier of the webhook.
-	ID string `json:"id" validate:"max=36" example:"123e4567-e89b-12d3-a456-426614174000"`
-
-	// The URL the webhook will be sent to.
-	URL string `json:"url" validate:"required,http_url" example:"https://example.com/webhook"`
-
-	// The type of event the webhook is triggered for.
-	Event EventType `json:"event" validate:"required" example:"sms:received"`
-}
+// Deprecated: use smsgateway package instead.
+type Webhook = smsgateway.Webhook

@@ -21,17 +21,6 @@ var allProcessStates = map[ProcessingState]struct{}{
 	ProcessingStateFailed:    {},
 }
 
-// Device
-type Device struct {
-	ID        string     `json:"id" example:"PyDmBQZZXYmyxMwED8Fzy"`                 // ID
-	Name      string     `json:"name" example:"My Device"`                           // Name
-	CreatedAt time.Time  `json:"createdAt" example:"2020-01-01T00:00:00Z"`           // Created at (read only)
-	UpdatedAt time.Time  `json:"updatedAt" example:"2020-01-01T00:00:00Z"`           // Updated at (read only)
-	DeletedAt *time.Time `json:"deletedAt,omitempty" example:"2020-01-01T00:00:00Z"` // Deleted at (read only)
-
-	LastSeen time.Time `json:"lastSeen" example:"2020-01-01T00:00:00Z"` // Last seen at (read only)
-}
-
 // Message
 type Message struct {
 	ID                 string   `json:"id,omitempty" validate:"omitempty,max=36" example:"PyDmBQZZXYmyxMwED8Fzy"`                          // ID (if not set - will be generated)
