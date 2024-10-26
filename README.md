@@ -30,7 +30,7 @@ Before you begin, ensure you have met the following requirements:
 To install the SMS Gateway API Client in the existing project, run this command in your terminal:
 
 ```bash
-go get github.com/capcom6/android-sms-gateway-go
+go get github.com/android-sms-gateway/client-go
 ```
 
 ## Usage
