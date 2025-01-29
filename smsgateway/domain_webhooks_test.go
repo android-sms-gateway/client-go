@@ -32,3 +32,13 @@ func TestIsValidEventType(t *testing.T) {
 		})
 	}
 }
+
+// TestWebhookEventTypes tests that the event types returned by
+// WebhookEventTypes are all valid.
+func TestWebhookEventTypes(t *testing.T) {
+	for _, v := range smsgateway.WebhookEventTypes() {
+		if !smsgateway.IsValidWebhookEvent(v) {
+			t.Errorf("event type %s is not valid", v)
+		}
+	}
+}

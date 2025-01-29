@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -50,6 +51,32 @@ func (c *Client) GetState(ctx context.Context, messageID string) (MessageState, 
 	return resp, c.doRequest(ctx, http.MethodGet, path, map[string]string{}, nil, &resp)
 }
 
+// ListWebhooks retrieves all registered webhooks.
+// Returns a slice of Webhook objects or an error if the request fails.
+func (c *Client) ListWebhooks(ctx context.Context) ([]Webhook, error) {
+	path := "/webhooks"
+	resp := []Webhook{}
+
+	return resp, c.doRequest(ctx, http.MethodGet, path, map[string]string{}, nil, &resp)
+}
+
+// RegisterWebhook registers a new webhook.
+// Returns the registered webhook with server-assigned fields or an error if the request fails.
+func (c *Client) RegisterWebhook(ctx context.Context, webhook Webhook) (Webhook, error) {
+	path := "/webhooks"
+	resp := Webhook{}
+
+	return resp, c.doRequest(ctx, http.MethodPost, path, map[string]string{}, &webhook, &resp)
+}
+
+// DeleteWebhook removes a webhook with the specified ID.
+// Returns an error if the deletion fails.
+func (c *Client) DeleteWebhook(ctx context.Context, webhookID string) error {
+	path := fmt.Sprintf("/webhooks/%s", url.PathEscape(webhookID))
+
+	return c.doRequest(ctx, http.MethodDelete, path, map[string]string{}, nil, nil)
+}
+
 func (c *Client) doRequest(ctx context.Context, method, path string, headers map[string]string, payload, response any) error {
 	var reqBody io.Reader = nil
 	if payload != nil {
@@ -85,6 +112,10 @@ func (c *Client) doRequest(ctx context.Context, method, path string, headers map
 	if resp.StatusCode >= 400 {
 		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("unexpected status code %d with body %s", resp.StatusCode, string(body))
+	}
+
+	if resp.StatusCode == http.StatusNoContent {
+		return nil
 	}
 
 	return json.NewDecoder(resp.Body).Decode(&response)

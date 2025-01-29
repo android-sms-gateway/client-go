@@ -149,3 +149,181 @@ func TestClient_GetState(t *testing.T) {
 		t.Error("Expected error, got nil")
 	}
 }
+
+func TestClient_ListWebhooks(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/webhooks" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		if r.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`[{"id":"123","url":"https://example.com","event":"sms:delivered"}]`))
+	}))
+	defer server.Close()
+
+	client := NewClient(Config{
+		BaseURL: server.URL,
+	})
+
+	tests := []struct {
+		name    string
+		c       *Client
+		want    []Webhook
+		wantErr bool
+	}{
+		{
+			name: "Success",
+			c:    client,
+			want: []Webhook{
+				{
+					ID:    "123",
+					URL:   "https://example.com",
+					Event: WebhookEventSmsDelivered,
+				},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.c.ListWebhooks(context.Background())
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Client.ListWebhooks() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Client.ListWebhooks() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestClient_RegisterWebhook(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/webhooks" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		if r.Header.Get("Content-Type") != "application/json" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		body, _ := io.ReadAll(r.Body)
+		defer r.Body.Close()
+
+		if string(body) != `{"url":"https://example.com","event":"sms:delivered"}` {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		w.WriteHeader(http.StatusCreated)
+		_, _ = w.Write([]byte(`{"id":"123","url":"https://example.com","event":"sms:delivered"}`))
+	}))
+	defer server.Close()
+
+	client := NewClient(Config{
+		BaseURL: server.URL,
+	})
+
+	type args struct {
+		webhook Webhook
+	}
+	tests := []struct {
+		name    string
+		c       *Client
+		args    args
+		want    Webhook
+		wantErr bool
+	}{
+		{
+			name: "Success",
+			c:    client,
+			args: args{
+				webhook: Webhook{
+					URL:   "https://example.com",
+					Event: WebhookEventSmsDelivered,
+				},
+			},
+			want: Webhook{
+				ID:    "123",
+				URL:   "https://example.com",
+				Event: WebhookEventSmsDelivered,
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.c.RegisterWebhook(context.Background(), tt.args.webhook)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Client.RegisterWebhook() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Client.RegisterWebhook() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestClient_DeleteWebhook(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/webhooks/123" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		if r.Method != http.MethodDelete {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer server.Close()
+
+	client := NewClient(Config{
+		BaseURL: server.URL,
+	})
+
+	type args struct {
+		webhookID string
+	}
+	tests := []struct {
+		name    string
+		c       *Client
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "Success",
+			c:    client,
+			args: args{
+				webhookID: "123",
+			},
+			wantErr: false,
+		},
+		{
+			name: "Not Found",
+			c:    client,
+			args: args{
+				webhookID: "456",
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.c.DeleteWebhook(context.Background(), tt.args.webhookID); (err != nil) != tt.wantErr {
+				t.Errorf("Client.DeleteWebhook() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}

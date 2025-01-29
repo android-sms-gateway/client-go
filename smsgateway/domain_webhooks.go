@@ -23,6 +23,17 @@ var allEventTypes = map[WebhookEvent]struct{}{
 	WebhookEventSystemPing:   {},
 }
 
+// WebhookEventTypes returns a slice of all supported webhook event types.
+func WebhookEventTypes() []WebhookEvent {
+	return []WebhookEvent{
+		WebhookEventSmsReceived,
+		WebhookEventSmsSent,
+		WebhookEventSmsDelivered,
+		WebhookEventSmsFailed,
+		WebhookEventSystemPing,
+	}
+}
+
 // IsValid checks if the given event type is valid.
 //
 // e is the event type to be checked.
@@ -35,7 +46,7 @@ func IsValidWebhookEvent(e WebhookEvent) bool {
 // A webhook configuration.
 type Webhook struct {
 	// The unique identifier of the webhook.
-	ID string `json:"id" validate:"max=36" example:"123e4567-e89b-12d3-a456-426614174000"`
+	ID string `json:"id,omitempty" validate:"max=36" example:"123e4567-e89b-12d3-a456-426614174000"`
 
 	// The URL the webhook will be sent to.
 	URL string `json:"url" validate:"required,http_url" example:"https://example.com/webhook"`
