@@ -1,4 +1,4 @@
-package smsgateway
+package smsgateway_test
 
 import (
 	"context"
@@ -7,31 +7,9 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"testing"
+
+	"github.com/android-sms-gateway/client-go/smsgateway"
 )
-
-func TestNewClient(t *testing.T) {
-	// Test case 1: Test with default client and base URL
-	config := Config{}
-	client := NewClient(config)
-	if client.config.Client != http.DefaultClient {
-		t.Errorf("Expected default client, got %v", client.config.Client)
-	}
-	if client.config.BaseURL != BASE_URL {
-		t.Errorf("Expected default base URL, got %s", client.config.BaseURL)
-	}
-
-	// Test case 2: Test with custom client and base URL
-	customClient := &http.Client{}
-	customBaseURL := "https://example.com"
-	config = Config{Client: customClient, BaseURL: customBaseURL}
-	client = NewClient(config)
-	if client.config.Client != customClient {
-		t.Errorf("Expected custom client, got %v", client.config.Client)
-	}
-	if client.config.BaseURL != customBaseURL {
-		t.Errorf("Expected custom base URL, got %s", client.config.BaseURL)
-	}
-}
 
 func TestClient_Send(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -59,19 +37,19 @@ func TestClient_Send(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(Config{
+	client := smsgateway.NewClient(smsgateway.Config{
 		BaseURL: server.URL,
 	})
 
 	type args struct {
 		ctx     context.Context
-		message Message
+		message smsgateway.Message
 	}
 	tests := []struct {
 		name    string
-		c       *Client
+		c       *smsgateway.Client
 		args    args
-		want    MessageState
+		want    smsgateway.MessageState
 		wantErr bool
 	}{
 		{
@@ -79,9 +57,9 @@ func TestClient_Send(t *testing.T) {
 			c:    client,
 			args: args{
 				ctx:     context.TODO(),
-				message: Message{},
+				message: smsgateway.Message{},
 			},
-			want:    MessageState{},
+			want:    smsgateway.MessageState{},
 			wantErr: false,
 		},
 	}
@@ -101,53 +79,76 @@ func TestClient_Send(t *testing.T) {
 
 func TestClient_GetState(t *testing.T) {
 	// Test case 1: Successful request
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/message/123" {
-			t.Errorf("Expected path /message/123, got %s", r.URL.Path)
-		}
-		if r.Method != http.MethodGet {
-			t.Errorf("Expected method GET, got %s", r.Method)
-		}
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"id": "123", "state": "Pending"}`))
-	}))
-	defer server.Close()
+	t.Run("Successful request", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path != "/message/123" {
+				t.Errorf("Expected path /message/123, got %s", r.URL.Path)
+			}
+			if r.Method != http.MethodGet {
+				t.Errorf("Expected method GET, got %s", r.Method)
+			}
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"id": "123", "state": "Pending"}`))
+		}))
+		defer server.Close()
 
-	client := NewClient(Config{
-		BaseURL: server.URL,
+		client := smsgateway.NewClient(smsgateway.Config{
+			BaseURL: server.URL,
+		})
+
+		state, err := client.GetState(context.Background(), "123")
+		if err != nil {
+			t.Errorf("Expected no error, got %v", err)
+		}
+		if state.ID != "123" {
+			t.Errorf("Expected ID 123, got %s", state.ID)
+		}
+		if state.State != smsgateway.ProcessingStatePending {
+			t.Errorf("Expected state Pending, got %s", state.State)
+		}
 	})
-
-	state, err := client.GetState(context.Background(), "123")
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-	}
-	if state.ID != "123" {
-		t.Errorf("Expected ID 123, got %s", state.ID)
-	}
-	if state.State != ProcessingStatePending {
-		t.Errorf("Expected state Pending, got %s", state.State)
-	}
 
 	// Test case 2: Error response
-	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-	}))
-	defer server.Close()
+	t.Run("Error response", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		}))
+		defer server.Close()
 
-	client = NewClient(Config{
-		BaseURL: server.URL,
+		client := smsgateway.NewClient(smsgateway.Config{
+			BaseURL: server.URL,
+		})
+
+		_, err := client.GetState(context.Background(), "123")
+		if err == nil {
+			t.Error("Expected error, got nil")
+		}
 	})
 
-	_, err = client.GetState(context.Background(), "123")
-	if err == nil {
-		t.Error("Expected error, got nil")
-	}
+	// Test case 3: Authorization header present
+	t.Run("Authorization header present", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("Authorization") != "Basic dXNlcjpwYXNzd29yZA==" {
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
 
-	// Test case 3: Invalid message ID
-	_, err = client.GetState(context.Background(), "invalid")
-	if err == nil {
-		t.Error("Expected error, got nil")
-	}
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"id": "123", "state": "Pending"}`))
+		}))
+		defer server.Close()
+
+		client := smsgateway.NewClient(smsgateway.Config{
+			BaseURL:  server.URL,
+			User:     "user",
+			Password: "password",
+		})
+
+		_, err := client.GetState(context.Background(), "123")
+		if err != nil {
+			t.Errorf("Expected no error, got %v", err)
+		}
+	})
 }
 
 func TestClient_ListWebhooks(t *testing.T) {
@@ -165,24 +166,24 @@ func TestClient_ListWebhooks(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(Config{
+	client := smsgateway.NewClient(smsgateway.Config{
 		BaseURL: server.URL,
 	})
 
 	tests := []struct {
 		name    string
-		c       *Client
-		want    []Webhook
+		c       *smsgateway.Client
+		want    []smsgateway.Webhook
 		wantErr bool
 	}{
 		{
 			name: "Success",
 			c:    client,
-			want: []Webhook{
+			want: []smsgateway.Webhook{
 				{
 					ID:    "123",
 					URL:   "https://example.com",
-					Event: WebhookEventSmsDelivered,
+					Event: smsgateway.WebhookEventSmsDelivered,
 				},
 			},
 			wantErr: false,
@@ -230,33 +231,33 @@ func TestClient_RegisterWebhook(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(Config{
+	client := smsgateway.NewClient(smsgateway.Config{
 		BaseURL: server.URL,
 	})
 
 	type args struct {
-		webhook Webhook
+		webhook smsgateway.Webhook
 	}
 	tests := []struct {
 		name    string
-		c       *Client
+		c       *smsgateway.Client
 		args    args
-		want    Webhook
+		want    smsgateway.Webhook
 		wantErr bool
 	}{
 		{
 			name: "Success",
 			c:    client,
 			args: args{
-				webhook: Webhook{
+				webhook: smsgateway.Webhook{
 					URL:   "https://example.com",
-					Event: WebhookEventSmsDelivered,
+					Event: smsgateway.WebhookEventSmsDelivered,
 				},
 			},
-			want: Webhook{
+			want: smsgateway.Webhook{
 				ID:    "123",
 				URL:   "https://example.com",
-				Event: WebhookEventSmsDelivered,
+				Event: smsgateway.WebhookEventSmsDelivered,
 			},
 			wantErr: false,
 		},
@@ -289,7 +290,7 @@ func TestClient_DeleteWebhook(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(Config{
+	client := smsgateway.NewClient(smsgateway.Config{
 		BaseURL: server.URL,
 	})
 
@@ -298,7 +299,7 @@ func TestClient_DeleteWebhook(t *testing.T) {
 	}
 	tests := []struct {
 		name    string
-		c       *Client
+		c       *smsgateway.Client
 		args    args
 		wantErr bool
 	}{
