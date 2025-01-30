@@ -42,7 +42,7 @@ func (c *Client) Do(ctx context.Context, method, path string, headers map[string
 
 	resp, err := c.config.Client.Do(req)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to make request: %w", err)
 	}
 	defer func() {
 		_, _ = io.Copy(io.Discard, resp.Body)
