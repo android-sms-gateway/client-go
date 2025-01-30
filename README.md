@@ -16,6 +16,7 @@ This is a Go client library for interfacing with the [SMS Gateway for Android AP
 
 - Send SMS messages with a simple method call.
 - Check the state of sent messages.
+- Webhooks management.
 - Customizable base URL for use with local, cloud or private servers.
 
 ## Prerequisites
@@ -56,16 +57,16 @@ import (
 func main() {
 	// Create a client with configuration from environment variables.
 	client := smsgateway.NewClient(smsgateway.Config{
-		User:     os.Getenv("GATEWAY_USER"),
-		Password: os.Getenv("GATEWAY_PASSWORD"),
+		User:     os.Getenv("ASG_USERNAME"),
+		Password: os.Getenv("ASG_PASSWORD"),
 	})
 
 	// Create a message to send.
 	message := smsgateway.Message{
-		Message: "Your SMS message text here",
+		Message: "Hello, doctors!",
 		PhoneNumbers: []string{
-			"+1234567890",
-			"+9876543210",
+			"+19162255887",
+			"+19162255888",
 		},
 	}
 
@@ -89,7 +90,7 @@ func main() {
 
 ## API Reference
 
-For more information on the API endpoints and data structures, please consult the [SMS Gateway for Android API documentation](https://sms-gate.app/api).
+For more information on the API endpoints and data structures, please consult the [SMS Gateway for Android API documentation](https://docs.sms-gate.app/integration/api/).
 
 # Contributing
 
