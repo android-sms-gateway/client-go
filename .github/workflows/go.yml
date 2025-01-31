@@ -1,6 +1,7 @@
 name: Go
 
 on:
+  workflow_dispatch:
   push:
     branches: [master]
     paths:
@@ -57,3 +58,9 @@ jobs:
       # step 4: run test
       - name: Run coverage
         run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+
+      # step 5: upload coverage
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
