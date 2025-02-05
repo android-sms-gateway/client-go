@@ -8,10 +8,10 @@ type MobileDeviceResponse struct {
 
 // Device registration response
 type MobileRegisterResponse struct {
-	Id       string `json:"id" example:"QslD_GefqiYV6RQXdkM6V"`    // New device ID
-	Token    string `json:"token" example:"bP0ZdK6rC6hCYZSjzmqhQ"` // Device access token
-	Login    string `json:"login" example:"VQ4GII"`                // User login
-	Password string `json:"password" example:"cp2pydvxd2zwpx"`     // User password
+	Id       string `json:"id" example:"QslD_GefqiYV6RQXdkM6V"`          // New device ID
+	Token    string `json:"token" example:"bP0ZdK6rC6hCYZSjzmqhQ"`       // Device access token
+	Login    string `json:"login,omitempty" example:"VQ4GII"`            // User login, empty if registration in existing user
+	Password string `json:"password,omitempty" example:"cp2pydvxd2zwpx"` // User password, empty if registration in existing user
 }
 
 // Error response
