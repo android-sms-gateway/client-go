@@ -1,5 +1,10 @@
 package smsgateway
 
+import (
+	"errors"
+	"strings"
+)
+
 type WebhookEvent = string
 
 const (
@@ -53,4 +58,18 @@ type Webhook struct {
 
 	// The type of event the webhook is triggered for.
 	Event WebhookEvent `json:"event" validate:"required" example:"sms:received"`
+}
+
+// Validate checks if the webhook is configured correctly.
+// Returns nil if validation passes, or an appropriate error otherwise.
+func (w Webhook) Validate() error {
+	if !IsValidWebhookEvent(w.Event) {
+		return errors.New("invalid event type")
+	}
+
+	if !strings.HasPrefix(strings.ToLower(w.URL), "https://") {
+		return errors.New("url must start with https://")
+	}
+
+	return nil
 }

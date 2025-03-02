@@ -42,3 +42,135 @@ func TestWebhookEventTypes(t *testing.T) {
 		}
 	}
 }
+
+// TestWebhook_Validate tests the Validate method of the Webhook struct.
+func TestWebhook_Validate(t *testing.T) {
+	tests := []struct {
+		name    string
+		webhook smsgateway.Webhook
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name: "Valid webhook with HTTPS URL",
+			webhook: smsgateway.Webhook{
+				ID:    "test-id",
+				URL:   "https://example.com/webhook",
+				Event: smsgateway.WebhookEventSmsReceived,
+			},
+			wantErr: false,
+		},
+		{
+			name: "Invalid event type",
+			webhook: smsgateway.Webhook{
+				ID:    "test-id",
+				URL:   "https://example.com/webhook",
+				Event: "invalid:event",
+			},
+			wantErr: true,
+			errMsg:  "invalid event type",
+		},
+		{
+			name: "Non-HTTPS URL",
+			webhook: smsgateway.Webhook{
+				ID:    "test-id",
+				URL:   "http://example.com/webhook",
+				Event: smsgateway.WebhookEventSmsReceived,
+			},
+			wantErr: true,
+			errMsg:  "url must start with https://",
+		},
+		{
+			name: "Empty URL",
+			webhook: smsgateway.Webhook{
+				ID:    "test-id",
+				URL:   "",
+				Event: smsgateway.WebhookEventSmsReceived,
+			},
+			wantErr: true,
+			errMsg:  "url must start with https://",
+		},
+		{
+			name: "Valid webhook with sms:sent event",
+			webhook: smsgateway.Webhook{
+				ID:    "test-id",
+				URL:   "https://example.com/webhook",
+				Event: smsgateway.WebhookEventSmsSent,
+			},
+			wantErr: false,
+		},
+		{
+			name: "Valid webhook with sms:delivered event",
+			webhook: smsgateway.Webhook{
+				ID:    "test-id",
+				URL:   "https://example.com/webhook",
+				Event: smsgateway.WebhookEventSmsDelivered,
+			},
+			wantErr: false,
+		},
+		{
+			name: "Valid webhook with sms:failed event",
+			webhook: smsgateway.Webhook{
+				ID:    "test-id",
+				URL:   "https://example.com/webhook",
+				Event: smsgateway.WebhookEventSmsFailed,
+			},
+			wantErr: false,
+		},
+		{
+			name: "Valid webhook with system:ping event",
+			webhook: smsgateway.Webhook{
+				ID:    "test-id",
+				URL:   "https://example.com/webhook",
+				Event: smsgateway.WebhookEventSystemPing,
+			},
+			wantErr: false,
+		},
+		{
+			name: "URL with uppercase HTTPS",
+			webhook: smsgateway.Webhook{
+				ID:    "test-id",
+				URL:   "HTTPS://example.com/webhook",
+				Event: smsgateway.WebhookEventSmsReceived,
+			},
+			wantErr: false,
+		},
+		{
+			name: "FTP URL",
+			webhook: smsgateway.Webhook{
+				ID:    "test-id",
+				URL:   "ftp://example.com/webhook",
+				Event: smsgateway.WebhookEventSmsReceived,
+			},
+			wantErr: true,
+			errMsg:  "url must start with https://",
+		},
+		{
+			name: "Malformed URL",
+			webhook: smsgateway.Webhook{
+				ID:    "test-id",
+				URL:   "https:/example.com",
+				Event: smsgateway.WebhookEventSmsReceived,
+			},
+			wantErr: true,
+			errMsg:  "url must start with https://",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.webhook.Validate()
+
+			// Check if an error was expected
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			// If we expected an error, check the error message
+			if tt.wantErr && err.Error() != tt.errMsg {
+				t.Errorf("Validate() error message = %v, want %v", err.Error(), tt.errMsg)
+			}
+		})
+	}
+}
