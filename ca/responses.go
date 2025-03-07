@@ -4,6 +4,8 @@ package ca
 type PostCSRResponse struct {
 	// RequestID is the ID of the request. Can be used to request status.
 	RequestID string `json:"request_id"`
+	// Type is the type of the requested certificate.
+	Type CSRType `json:"type"`
 	// Status is the status of the requested certificate.
 	Status CSRStatus `json:"status"`
 	// Message is a human-readable description of the status.
