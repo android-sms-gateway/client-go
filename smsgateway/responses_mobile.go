@@ -22,6 +22,9 @@ type MobileUserCodeResponse struct {
 	ValidUntil time.Time `json:"validUntil" example:"2020-01-01T00:00:00Z"` // One-time code expiration time
 }
 
-type MobileMessage Message
+type MobileMessage struct {
+	Message
+	CreatedAt time.Time `json:"createdAt" example:"2020-01-01T00:00:00Z"` // Message creation time
+}
 
 type MobileGetMessagesReponse []MobileMessage

@@ -32,8 +32,6 @@ type Message struct {
 
 	TTL        *uint64    `json:"ttl,omitempty" validate:"omitempty,min=5" example:"86400"` // Time to live in seconds (conflicts with `validUntil`)
 	ValidUntil *time.Time `json:"validUntil,omitempty" example:"2020-01-01T00:00:00Z"`      // Valid until (conflicts with `ttl`)
-
-	CreatedAt time.Time `json:"createdAt,omitempty" example:"2020-01-01T00:00:00Z"` // Created at (readonly)
 }
 
 func (m Message) Validate() error {
