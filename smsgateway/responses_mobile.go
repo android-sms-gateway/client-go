@@ -21,3 +21,7 @@ type MobileUserCodeResponse struct {
 	Code       string    `json:"code" example:"123456"`                     // One-time code
 	ValidUntil time.Time `json:"validUntil" example:"2020-01-01T00:00:00Z"` // One-time code expiration time
 }
+
+type MobileMessage Message
+
+type MobileGetMessagesReponse []MobileMessage
