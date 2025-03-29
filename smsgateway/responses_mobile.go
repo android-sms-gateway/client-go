@@ -22,9 +22,11 @@ type MobileUserCodeResponse struct {
 	ValidUntil time.Time `json:"validUntil" example:"2020-01-01T00:00:00Z"` // One-time code expiration time
 }
 
+// MobileMessage represents a Message in mobile response format
 type MobileMessage struct {
 	Message
 	CreatedAt time.Time `json:"createdAt" example:"2020-01-01T00:00:00Z"` // Message creation time
 }
 
-type MobileGetMessagesReponse []MobileMessage
+// MobileGetMessagesResponse represents a collection of messages for mobile clients
+type MobileGetMessagesResponse []MobileMessage
