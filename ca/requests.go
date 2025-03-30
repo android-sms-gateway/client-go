@@ -15,7 +15,7 @@ type PostCSRRequest struct {
 // Validate checks if the request is valid.
 func (c PostCSRRequest) Validate() error {
 	if c.Type != "" && !IsValidCSRType(c.Type) {
-		return fmt.Errorf("invalid csr type: %s", c.Type)
+		return fmt.Errorf("%w: invalid csr type: %s", ErrValidationFailed, c.Type)
 	}
 
 	return nil

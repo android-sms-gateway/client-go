@@ -1,8 +1,7 @@
-package smsgateway
+package ca
 
 import "errors"
 
 var (
 	ErrValidationFailed = errors.New("validation failed")
-	ErrConflictFields   = errors.New("conflict fields")
 )

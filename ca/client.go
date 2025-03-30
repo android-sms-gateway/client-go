@@ -2,6 +2,7 @@ package ca
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 
@@ -19,24 +20,32 @@ type Client struct {
 // The request ID can be used to get the status of the request using the GetCSRStatus method.
 func (c *Client) PostCSR(ctx context.Context, request PostCSRRequest) (PostCSRResponse, error) {
 	path := "/csr"
-	resp := PostCSRResponse{}
+	resp := new(PostCSRResponse)
 
-	return resp, c.Do(ctx, http.MethodPost, path, emptyHeaders, &request, &resp)
+	if err := c.Do(ctx, http.MethodPost, path, emptyHeaders, &request, resp); err != nil {
+		return *resp, fmt.Errorf("failed to post CSR: %w", err)
+	}
+
+	return *resp, nil
 }
 
 // GetCSRStatus retrieves the status of a Certificate Signing Request (CSR) from the Certificate Authority (CA) service.
 func (c *Client) GetCSRStatus(ctx context.Context, requestID string) (GetCSRStatusResponse, error) {
 	path := "/csr/" + url.PathEscape(requestID)
-	resp := GetCSRStatusResponse{}
+	resp := new(GetCSRStatusResponse)
 
-	return resp, c.Do(ctx, http.MethodGet, path, emptyHeaders, nil, &resp)
+	if err := c.Do(ctx, http.MethodGet, path, emptyHeaders, nil, resp); err != nil {
+		return *resp, fmt.Errorf("failed to get CSR status: %w", err)
+	}
+
+	return *resp, nil
 }
 
 // NewClient creates a new instance of the CA API Client.
 func NewClient(options ...Option) *Client {
-	config := Config{}
+	config := new(Config)
 	for _, option := range options {
-		option(&config)
+		option(config)
 	}
 
 	return &Client{

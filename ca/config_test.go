@@ -8,7 +8,8 @@ import (
 	"github.com/android-sms-gateway/client-go/ca"
 )
 
-var customHttpClient = &http.Client{}
+//nolint:gochecknoglobals // constant
+var customHTTPClient = &http.Client{}
 
 func TestConfig_Client(t *testing.T) {
 	tests := []struct {
@@ -18,8 +19,8 @@ func TestConfig_Client(t *testing.T) {
 	}{
 		{
 			name:   "With Client",
-			option: ca.WithClient(customHttpClient),
-			want:   customHttpClient,
+			option: ca.WithClient(customHTTPClient),
+			want:   customHTTPClient,
 		},
 		{
 			name:   "Without Client",

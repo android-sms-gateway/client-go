@@ -19,18 +19,18 @@ type Client struct {
 }
 
 func (c *Client) Do(ctx context.Context, method, path string, headers map[string]string, payload, response any) error {
-	var reqBody io.Reader = nil
+	var reqBody io.Reader
 	if payload != nil {
 		jsonBytes, err := json.Marshal(payload)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to marshal payload: %w", err)
 		}
 		reqBody = strings.NewReader(string(jsonBytes))
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, c.config.BaseURL+path, reqBody)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create request: %w", err)
 	}
 
 	if reqBody != nil {
@@ -49,16 +49,20 @@ func (c *Client) Do(ctx context.Context, method, path string, headers map[string
 		resp.Body.Close()
 	}()
 
-	if resp.StatusCode >= 400 {
+	if resp.StatusCode >= http.StatusBadRequest {
 		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("unexpected status code %d with body %s", resp.StatusCode, string(body))
+		return fmt.Errorf("%w: unexpected status code %d with body %s", ErrAPIError, resp.StatusCode, string(body))
 	}
 
 	if resp.StatusCode == http.StatusNoContent {
 		return nil
 	}
 
-	return json.NewDecoder(resp.Body).Decode(&response)
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return nil
 }
 
 func NewClient(config Config) *Client {

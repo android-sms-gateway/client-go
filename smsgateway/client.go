@@ -10,6 +10,7 @@ import (
 	"github.com/android-sms-gateway/client-go/rest"
 )
 
+//nolint:revive // backward compatibility
 const BASE_URL = "https://api.sms-gate.app/3rdparty/v1"
 
 type Config struct {
@@ -28,17 +29,25 @@ type Client struct {
 // Sends an SMS message.
 func (c *Client) Send(ctx context.Context, message Message) (MessageState, error) {
 	path := "/message"
-	resp := MessageState{}
+	resp := new(MessageState)
 
-	return resp, c.Do(ctx, http.MethodPost, path, c.headers, &message, &resp)
+	if err := c.Do(ctx, http.MethodPost, path, c.headers, &message, resp); err != nil {
+		return *resp, fmt.Errorf("failed to send message: %w", err)
+	}
+
+	return *resp, nil
 }
 
 // Gets the state of an SMS message by ID.
 func (c *Client) GetState(ctx context.Context, messageID string) (MessageState, error) {
 	path := fmt.Sprintf("/message/%s", messageID)
-	resp := MessageState{}
+	resp := new(MessageState)
 
-	return resp, c.Do(ctx, http.MethodGet, path, c.headers, nil, &resp)
+	if err := c.Do(ctx, http.MethodGet, path, c.headers, nil, resp); err != nil {
+		return *resp, fmt.Errorf("failed to get message state: %w", err)
+	}
+
+	return *resp, nil
 }
 
 // ListWebhooks retrieves all registered webhooks.
@@ -47,16 +56,24 @@ func (c *Client) ListWebhooks(ctx context.Context) ([]Webhook, error) {
 	path := "/webhooks"
 	resp := []Webhook{}
 
-	return resp, c.Do(ctx, http.MethodGet, path, c.headers, nil, &resp)
+	if err := c.Do(ctx, http.MethodGet, path, c.headers, nil, &resp); err != nil {
+		return resp, fmt.Errorf("failed to list webhooks: %w", err)
+	}
+
+	return resp, nil
 }
 
 // RegisterWebhook registers a new webhook.
 // Returns the registered webhook with server-assigned fields or an error if the request fails.
 func (c *Client) RegisterWebhook(ctx context.Context, webhook Webhook) (Webhook, error) {
 	path := "/webhooks"
-	resp := Webhook{}
+	resp := new(Webhook)
 
-	return resp, c.Do(ctx, http.MethodPost, path, c.headers, &webhook, &resp)
+	if err := c.Do(ctx, http.MethodPost, path, c.headers, &webhook, resp); err != nil {
+		return *resp, fmt.Errorf("failed to register webhook: %w", err)
+	}
+
+	return *resp, nil
 }
 
 // DeleteWebhook removes a webhook with the specified ID.
@@ -64,7 +81,11 @@ func (c *Client) RegisterWebhook(ctx context.Context, webhook Webhook) (Webhook,
 func (c *Client) DeleteWebhook(ctx context.Context, webhookID string) error {
 	path := fmt.Sprintf("/webhooks/%s", url.PathEscape(webhookID))
 
-	return c.Do(ctx, http.MethodDelete, path, c.headers, nil, nil)
+	if err := c.Do(ctx, http.MethodDelete, path, c.headers, nil, nil); err != nil {
+		return fmt.Errorf("failed to delete webhook: %w", err)
+	}
+
+	return nil
 }
 
 // NewClient creates a new instance of the API Client.

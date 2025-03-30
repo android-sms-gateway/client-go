@@ -1,6 +1,7 @@
 package smsgateway_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/android-sms-gateway/client-go/smsgateway"
@@ -49,7 +50,7 @@ func TestWebhook_Validate(t *testing.T) {
 		name    string
 		webhook smsgateway.Webhook
 		wantErr bool
-		errMsg  string
+		err     error
 	}{
 		{
 			name: "Valid webhook with HTTPS URL",
@@ -68,7 +69,7 @@ func TestWebhook_Validate(t *testing.T) {
 				Event: "invalid:event",
 			},
 			wantErr: true,
-			errMsg:  "invalid event type",
+			err:     smsgateway.ErrValidationFailed,
 		},
 		{
 			name: "Non-HTTPS URL",
@@ -78,7 +79,7 @@ func TestWebhook_Validate(t *testing.T) {
 				Event: smsgateway.WebhookEventSmsReceived,
 			},
 			wantErr: true,
-			errMsg:  "url must start with https://",
+			err:     smsgateway.ErrValidationFailed,
 		},
 		{
 			name: "Empty URL",
@@ -88,7 +89,7 @@ func TestWebhook_Validate(t *testing.T) {
 				Event: smsgateway.WebhookEventSmsReceived,
 			},
 			wantErr: true,
-			errMsg:  "url must start with https://",
+			err:     smsgateway.ErrValidationFailed,
 		},
 		{
 			name: "Valid webhook with sms:sent event",
@@ -143,7 +144,7 @@ func TestWebhook_Validate(t *testing.T) {
 				Event: smsgateway.WebhookEventSmsReceived,
 			},
 			wantErr: true,
-			errMsg:  "url must start with https://",
+			err:     smsgateway.ErrValidationFailed,
 		},
 		{
 			name: "Malformed URL",
@@ -153,7 +154,7 @@ func TestWebhook_Validate(t *testing.T) {
 				Event: smsgateway.WebhookEventSmsReceived,
 			},
 			wantErr: true,
-			errMsg:  "url must start with https://",
+			err:     smsgateway.ErrValidationFailed,
 		},
 	}
 
@@ -168,8 +169,8 @@ func TestWebhook_Validate(t *testing.T) {
 			}
 
 			// If we expected an error, check the error message
-			if tt.wantErr && err.Error() != tt.errMsg {
-				t.Errorf("Validate() error message = %v, want %v", err.Error(), tt.errMsg)
+			if tt.wantErr && !errors.Is(err, tt.err) {
+				t.Errorf("Validate() error message = %v, want %v", err.Error(), tt.err)
 			}
 		})
 	}

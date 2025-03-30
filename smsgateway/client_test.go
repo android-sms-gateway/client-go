@@ -26,7 +26,7 @@ func TestClient_Send(t *testing.T) {
 		req, _ := io.ReadAll(r.Body)
 		defer r.Body.Close()
 
-		if string(req) != `{"message":"","phoneNumbers":null}` {
+		if string(req) == `{"message":"","phoneNumbers":null}` {
 			w.WriteHeader(http.StatusBadRequest)
 			_, _ = w.Write(req)
 			return
@@ -56,11 +56,24 @@ func TestClient_Send(t *testing.T) {
 			name: "Success",
 			c:    client,
 			args: args{
+				ctx: context.TODO(),
+				message: smsgateway.Message{
+					Message:      "Hello, world!",
+					PhoneNumbers: []string{"+1234567890"},
+				},
+			},
+			want:    smsgateway.MessageState{},
+			wantErr: false,
+		},
+		{
+			name: "Bad Request",
+			c:    client,
+			args: args{
 				ctx:     context.TODO(),
 				message: smsgateway.Message{},
 			},
 			want:    smsgateway.MessageState{},
-			wantErr: false,
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
@@ -93,7 +106,10 @@ func TestClient_GetState(t *testing.T) {
 		defer server.Close()
 
 		client := smsgateway.NewClient(smsgateway.Config{
-			BaseURL: server.URL,
+			BaseURL:  server.URL,
+			Client:   nil,
+			User:     "",
+			Password: "",
 		})
 
 		state, err := client.GetState(context.Background(), "123")
@@ -110,13 +126,16 @@ func TestClient_GetState(t *testing.T) {
 
 	// Test case 2: Error response
 	t.Run("Error response", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 		}))
 		defer server.Close()
 
 		client := smsgateway.NewClient(smsgateway.Config{
-			BaseURL: server.URL,
+			BaseURL:  server.URL,
+			Client:   nil,
+			User:     "",
+			Password: "",
 		})
 
 		_, err := client.GetState(context.Background(), "123")
@@ -140,6 +159,7 @@ func TestClient_GetState(t *testing.T) {
 
 		client := smsgateway.NewClient(smsgateway.Config{
 			BaseURL:  server.URL,
+			Client:   nil,
 			User:     "user",
 			Password: "password",
 		})
@@ -167,7 +187,10 @@ func TestClient_ListWebhooks(t *testing.T) {
 	defer server.Close()
 
 	client := smsgateway.NewClient(smsgateway.Config{
-		BaseURL: server.URL,
+		BaseURL:  server.URL,
+		Client:   nil,
+		User:     "",
+		Password: "",
 	})
 
 	tests := []struct {
@@ -232,7 +255,10 @@ func TestClient_RegisterWebhook(t *testing.T) {
 	defer server.Close()
 
 	client := smsgateway.NewClient(smsgateway.Config{
-		BaseURL: server.URL,
+		BaseURL:  server.URL,
+		Client:   nil,
+		User:     "",
+		Password: "",
 	})
 
 	type args struct {
@@ -250,6 +276,7 @@ func TestClient_RegisterWebhook(t *testing.T) {
 			c:    client,
 			args: args{
 				webhook: smsgateway.Webhook{
+					ID:    "",
 					URL:   "https://example.com",
 					Event: smsgateway.WebhookEventSmsDelivered,
 				},
@@ -291,7 +318,10 @@ func TestClient_DeleteWebhook(t *testing.T) {
 	defer server.Close()
 
 	client := smsgateway.NewClient(smsgateway.Config{
-		BaseURL: server.URL,
+		BaseURL:  server.URL,
+		Client:   nil,
+		User:     "",
+		Password: "",
 	})
 
 	type args struct {

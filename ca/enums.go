@@ -30,6 +30,7 @@ func (c CSRStatus) Description() string {
 	}
 }
 
+//nolint:gochecknoglobals // lookup table
 var allCSRTypes = map[CSRType]struct{}{
 	CSRTypeWebhook:       {},
 	CSRTypePrivateServer: {},

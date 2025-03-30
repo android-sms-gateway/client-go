@@ -1,3 +1,4 @@
+//nolint:lll // validator tags
 package smsgateway
 
 // The type of event.

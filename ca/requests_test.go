@@ -1,6 +1,7 @@
 package ca_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/android-sms-gateway/client-go/ca"
@@ -11,7 +12,7 @@ func TestPostCSRRequest_Validate(t *testing.T) {
 		name    string
 		request ca.PostCSRRequest
 		wantErr bool
-		errMsg  string
+		err     error
 	}{
 		{
 			name: "empty type should be valid",
@@ -44,7 +45,7 @@ func TestPostCSRRequest_Validate(t *testing.T) {
 				Content: "-----BEGIN CERTIFICATE REQUEST-----TEST",
 			},
 			wantErr: true,
-			errMsg:  "invalid csr type: invalid_type",
+			err:     ca.ErrValidationFailed,
 		},
 	}
 
@@ -57,13 +58,11 @@ func TestPostCSRRequest_Validate(t *testing.T) {
 					t.Errorf("Expected error but got nil")
 					return
 				}
-				if err.Error() != tt.errMsg {
-					t.Errorf("Expected error message '%s', got '%s'", tt.errMsg, err.Error())
+				if !errors.Is(err, tt.err) {
+					t.Errorf("Expected error message '%s', got '%s'", tt.err, err.Error())
 				}
-			} else {
-				if err != nil {
-					t.Errorf("Unexpected error: %v", err)
-				}
+			} else if err != nil {
+				t.Errorf("Unexpected error: %v", err)
 			}
 		})
 	}

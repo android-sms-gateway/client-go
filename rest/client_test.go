@@ -3,6 +3,7 @@ package rest_test
 import (
 	"context"
 	"io"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -20,6 +21,13 @@ func TestClient_Do(t *testing.T) {
 		if r.URL.Path == "/404" {
 			w.WriteHeader(http.StatusNotFound)
 			_, _ = w.Write([]byte("not found"))
+			return
+		}
+
+		if r.URL.Path == "/corrupt" {
+			w.WriteHeader(http.StatusOK)
+			w.Header().Add("Content-Type", "application/json")
+			_, _ = w.Write([]byte("{not a json"))
 			return
 		}
 
@@ -113,6 +121,35 @@ func TestClient_Do(t *testing.T) {
 				path:   "/204",
 			},
 			wantErr: false,
+		},
+		{
+			name: "Corrupt response",
+			fields: fields{
+				config: rest.Config{
+					BaseURL: httpServer.URL,
+				},
+			},
+			args: args{
+				ctx:    context.Background(),
+				method: http.MethodGet,
+				path:   "/corrupt",
+			},
+			wantErr: true,
+		},
+		{
+			name: "Corrupt request",
+			fields: fields{
+				config: rest.Config{
+					BaseURL: httpServer.URL,
+				},
+			},
+			args: args{
+				ctx:     context.Background(),
+				method:  http.MethodPost,
+				path:    "/",
+				payload: math.NaN(),
+			},
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {

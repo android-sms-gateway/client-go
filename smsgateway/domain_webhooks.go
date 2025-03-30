@@ -1,7 +1,7 @@
 package smsgateway
 
 import (
-	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -20,6 +20,7 @@ const (
 	WebhookEventSystemPing WebhookEvent = "system:ping"
 )
 
+//nolint:gochecknoglobals // lookup table
 var allEventTypes = map[WebhookEvent]struct{}{
 	WebhookEventSmsReceived:  {},
 	WebhookEventSmsSent:      {},
@@ -64,11 +65,11 @@ type Webhook struct {
 // Returns nil if validation passes, or an appropriate error otherwise.
 func (w Webhook) Validate() error {
 	if !IsValidWebhookEvent(w.Event) {
-		return errors.New("invalid event type")
+		return fmt.Errorf("%w: invalid event type", ErrValidationFailed)
 	}
 
 	if !strings.HasPrefix(strings.ToLower(w.URL), "https://") {
-		return errors.New("url must start with https://")
+		return fmt.Errorf("%w: url must start with https://", ErrValidationFailed)
 	}
 
 	return nil
