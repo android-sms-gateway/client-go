@@ -54,6 +54,9 @@ type Webhook struct {
 	// The unique identifier of the webhook.
 	ID string `json:"id,omitempty" validate:"max=36" example:"123e4567-e89b-12d3-a456-426614174000"`
 
+	// The unique identifier of the device the webhook is associated with.
+	DeviceID *string `json:"deviceId" validate:"omitempty,max=21" example:"PyDmBQZZXYmyxMwED8Fzy"`
+
 	// The URL the webhook will be sent to.
 	URL string `json:"url" validate:"required,http_url" example:"https://example.com/webhook"`
 

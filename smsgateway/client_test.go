@@ -182,7 +182,7 @@ func TestClient_ListWebhooks(t *testing.T) {
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`[{"id":"123","url":"https://example.com","event":"sms:delivered"}]`))
+		_, _ = w.Write([]byte(`[{"id":"123","deviceId":null,"url":"https://example.com","event":"sms:delivered"}]`))
 	}))
 	defer server.Close()
 
@@ -244,13 +244,15 @@ func TestClient_RegisterWebhook(t *testing.T) {
 		body, _ := io.ReadAll(r.Body)
 		defer r.Body.Close()
 
-		if string(body) != `{"url":"https://example.com","event":"sms:delivered"}` {
+		expectedBody := `{"deviceId":null,"url":"https://example.com","event":"sms:delivered"}`
+		if string(body) != expectedBody {
 			w.WriteHeader(http.StatusBadRequest)
+			t.Errorf("Expected body %s, got %s", expectedBody, string(body))
 			return
 		}
 
 		w.WriteHeader(http.StatusCreated)
-		_, _ = w.Write([]byte(`{"id":"123","url":"https://example.com","event":"sms:delivered"}`))
+		_, _ = w.Write([]byte(`{"id":"123","deviceId":null,"url":"https://example.com","event":"sms:delivered"}`))
 	}))
 	defer server.Close()
 
