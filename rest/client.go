@@ -51,7 +51,8 @@ func (c *Client) Do(ctx context.Context, method, path string, headers map[string
 
 	if resp.StatusCode >= http.StatusBadRequest {
 		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("%w: unexpected status code %d with body %s", ErrAPIError, resp.StatusCode, string(body))
+
+		return c.formatError(resp.StatusCode, body)
 	}
 
 	if resp.StatusCode == http.StatusNoContent {
@@ -63,6 +64,22 @@ func (c *Client) Do(ctx context.Context, method, path string, headers map[string
 	}
 
 	return nil
+}
+
+func (c *Client) formatError(statusCode int, body []byte) error {
+	switch statusCode {
+	case http.StatusBadRequest:
+		return fmt.Errorf("%w: %s", ErrBadRequest, string(body))
+	case http.StatusConflict:
+		return fmt.Errorf("%w: %s", ErrConflict, string(body))
+	}
+
+	if statusCode >= http.StatusInternalServerError {
+		return fmt.Errorf("%w: unexpected status code %d with body %s", ErrServer, statusCode, string(body))
+	}
+
+	// All other client errors (400-499)
+	return fmt.Errorf("%w: unexpected status code %d with body %s", ErrClient, statusCode, string(body))
 }
 
 func NewClient(config Config) *Client {
