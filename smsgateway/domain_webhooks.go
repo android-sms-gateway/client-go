@@ -10,6 +10,8 @@ type WebhookEvent = string
 const (
 	// Triggered when an SMS is received.
 	WebhookEventSmsReceived WebhookEvent = "sms:received"
+	// Triggered when a data SMS is received.
+	WebhookEventSmsDataReceived WebhookEvent = "sms:data-received"
 	// Triggered when an SMS is sent.
 	WebhookEventSmsSent WebhookEvent = "sms:sent"
 	// Triggered when an SMS is delivered.
@@ -22,17 +24,19 @@ const (
 
 //nolint:gochecknoglobals // lookup table
 var allEventTypes = map[WebhookEvent]struct{}{
-	WebhookEventSmsReceived:  {},
-	WebhookEventSmsSent:      {},
-	WebhookEventSmsDelivered: {},
-	WebhookEventSmsFailed:    {},
-	WebhookEventSystemPing:   {},
+	WebhookEventSmsReceived:     {},
+	WebhookEventSmsDataReceived: {},
+	WebhookEventSmsSent:         {},
+	WebhookEventSmsDelivered:    {},
+	WebhookEventSmsFailed:       {},
+	WebhookEventSystemPing:      {},
 }
 
 // WebhookEventTypes returns a slice of all supported webhook event types.
 func WebhookEventTypes() []WebhookEvent {
 	return []WebhookEvent{
 		WebhookEventSmsReceived,
+		WebhookEventSmsDataReceived,
 		WebhookEventSmsSent,
 		WebhookEventSmsDelivered,
 		WebhookEventSmsFailed,
