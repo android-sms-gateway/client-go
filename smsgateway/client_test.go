@@ -26,7 +26,7 @@ func TestClient_Send(t *testing.T) {
 		req, _ := io.ReadAll(r.Body)
 		defer r.Body.Close()
 
-		if string(req) == `{"message":"","phoneNumbers":null}` {
+		if string(req) == `{"phoneNumbers":null}` {
 			w.WriteHeader(http.StatusBadRequest)
 			_, _ = w.Write(req)
 			return
