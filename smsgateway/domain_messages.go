@@ -36,12 +36,33 @@ var allProcessStates = map[ProcessingState]struct{}{
 	ProcessingStateFailed:    {},
 }
 
+// Text SMS message
+type TextMessage struct {
+	// Message text
+	Text string `json:"text" validate:"required,max=65535" example:"Hello World!"`
+}
+
+// Data SMS message
+type DataMessage struct {
+	// Base64-encoded payload
+	Data string `json:"data" validate:"required,base64,max=65535" example:"SGVsbG8gV29ybGQh"`
+	// Destination port
+	Port uint16 `json:"port" validate:"required,min=1,max=65535" example:"1"`
+}
+
 // Message
 type Message struct {
 	// ID (if not set - will be generated)
 	ID string `json:"id,omitempty" validate:"omitempty,max=36" example:"PyDmBQZZXYmyxMwED8Fzy"`
-	// Content
-	Message string `json:"message" validate:"required,max=65535" example:"Hello World!"`
+	// Message content
+	// Deprecated: use TextMessage instead
+	Message string `json:"message,omitempty" validate:"omitempty,max=65535" example:"Hello World!"`
+
+	// Text message
+	TextMessage *TextMessage `json:"textMessage,omitempty" validate:"omitempty"`
+	// Data message
+	DataMessage *DataMessage `json:"dataMessage,omitempty" validate:"omitempty"`
+
 	// Recipients (phone numbers)
 	PhoneNumbers []string `json:"phoneNumbers" validate:"required,min=1,max=100,dive,required,min=1,max=128" example:"79990001234"`
 	// Is encrypted
@@ -60,7 +81,50 @@ type Message struct {
 	ValidUntil *time.Time `json:"validUntil,omitempty" example:"2020-01-01T00:00:00Z"`
 }
 
-func (m Message) Validate() error {
+// GetTextMessage returns the TextMessage, if it was set explicitly, or
+// constructs it from the deprecated Message field and returns it.
+// If neither TextMessage nor Message are set, returns nil.
+func (m *Message) GetTextMessage() *TextMessage {
+	if m.TextMessage != nil {
+		return m.TextMessage
+	}
+
+	if m.Message != "" {
+		return &TextMessage{
+			Text: m.Message,
+		}
+	}
+
+	return nil
+}
+
+// GetDataMessage returns the DataMessage, if it was set explicitly, or nil otherwise.
+func (m *Message) GetDataMessage() *DataMessage {
+	return m.DataMessage
+}
+
+// Validate validates the Message structure.
+func (m *Message) Validate() error {
+	fields := []bool{
+		m.Message != "",
+		m.TextMessage != nil,
+		m.DataMessage != nil,
+	}
+
+	filled := 0
+	for _, f := range fields {
+		if f {
+			filled++
+		}
+	}
+
+	if filled == 0 {
+		return fmt.Errorf("%w: must specify exactly one of: textMessage or dataMessage", ErrValidationFailed)
+	}
+	if filled > 1 {
+		return fmt.Errorf("%w: must specify exactly one of: textMessage or dataMessage", ErrConflictFields)
+	}
+
 	if m.TTL != nil && m.ValidUntil != nil {
 		return fmt.Errorf("%w: ttl and validUntil", ErrConflictFields)
 	}
