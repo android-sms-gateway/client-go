@@ -39,15 +39,15 @@ var allProcessStates = map[ProcessingState]struct{}{
 // Text SMS message
 type TextMessage struct {
 	// Message text
-	Text string `json:"text" validate:"required,max=65535" example:"Hello World!"`
+	Text string `json:"text" validate:"required,min=1,max=65535" example:"Hello World!"`
 }
 
 // Data SMS message
 type DataMessage struct {
 	// Base64-encoded payload
-	Data string `json:"data" validate:"required,base64,max=65535" example:"SGVsbG8gV29ybGQh"`
+	Data string `json:"data" validate:"required,base64,min=4,max=65535" example:"SGVsbG8gV29ybGQh" format:"byte"`
 	// Destination port
-	Port uint16 `json:"port" validate:"required,min=1,max=65535" example:"1"`
+	Port uint16 `json:"port" validate:"required,min=1,max=65535" example:"53739"`
 }
 
 // Message
