@@ -54,6 +54,9 @@ type DataMessage struct {
 type Message struct {
 	// ID (if not set - will be generated)
 	ID string `json:"id,omitempty" validate:"omitempty,max=36" example:"PyDmBQZZXYmyxMwED8Fzy"`
+	// Optional device ID for explicit selection
+	DeviceID string `json:"deviceId,omitempty" validate:"omitempty,max=21" example:"PyDmBQZZXYmyxMwED8Fzy"`
+
 	// Message content
 	// Deprecated: use TextMessage instead
 	Message string `json:"message,omitempty" validate:"omitempty,max=65535" example:"Hello World!"`
@@ -136,6 +139,8 @@ func (m *Message) Validate() error {
 type MessageState struct {
 	// Message ID
 	ID string `json:"id,omitempty" validate:"omitempty,max=36" example:"PyDmBQZZXYmyxMwED8Fzy"`
+	// Device ID
+	DeviceID string `json:"deviceId" validate:"required,max=21" example:"PyDmBQZZXYmyxMwED8Fzy"`
 	// State
 	State ProcessingState `json:"state" validate:"required" example:"Pending"`
 	// Hashed
