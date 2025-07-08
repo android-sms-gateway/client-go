@@ -138,7 +138,7 @@ func (m *Message) Validate() error {
 // Message state
 type MessageState struct {
 	// Message ID
-	ID string `json:"id,omitempty" validate:"omitempty,max=36" example:"PyDmBQZZXYmyxMwED8Fzy"`
+	ID string `json:"id" validate:"required,max=36" example:"PyDmBQZZXYmyxMwED8Fzy"`
 	// Device ID
 	DeviceID string `json:"deviceId" validate:"required,max=21" example:"PyDmBQZZXYmyxMwED8Fzy"`
 	// State
