@@ -1,5 +1,7 @@
 package smsgateway
 
+import "time"
+
 // Device registration request
 type MobileRegisterRequest struct {
 	Name      *string `json:"name,omitempty" validate:"omitempty,max=128" example:"Android Phone"`    // Device name
@@ -21,3 +23,18 @@ type MobileChangePasswordRequest struct {
 	// New password, at least 14 characters
 	NewPassword string `json:"newPassword" validate:"required,min=14" example:"cp2pydvxd2zwpx"`
 }
+
+// MobilePatchMessageItem represents a single message patch request
+type MobilePatchMessageItem struct {
+	// Message ID
+	ID string `json:"id" validate:"required,max=36" example:"PyDmBQZZXYmyxMwED8Fzy"`
+	// State
+	State ProcessingState `json:"state" validate:"required" example:"Pending"`
+	// Recipients states
+	Recipients []RecipientState `json:"recipients" validate:"required,min=1,dive"`
+	// History of states
+	States map[string]time.Time `json:"states"`
+}
+
+// Message patch request
+type MobilePatchMessageRequest []MobilePatchMessageItem
