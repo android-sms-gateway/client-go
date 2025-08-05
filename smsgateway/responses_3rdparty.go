@@ -1,3 +1,4 @@
 package smsgateway
 
-type GetMessageResponse = MessageState
+type GetMessageResponse MessageState
+type GetMessagesResponse []MessageState
