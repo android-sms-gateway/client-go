@@ -29,6 +29,15 @@ const (
 	Random SimSelectionMode = "Random"
 )
 
+type MessagesProcessingOrder string
+
+const (
+	// LIFO is the last-in-first-out order. Newer messages are processed first.
+	LIFO MessagesProcessingOrder = "LIFO"
+	// FIFO is the first-in-first-out order. Newer messages are processed last.
+	FIFO MessagesProcessingOrder = "FIFO"
+)
+
 // DeviceSettings represents the overall configuration settings for a device.
 type DeviceSettings struct {
 	// Encryption contains settings related to message encryption.
@@ -85,6 +94,10 @@ type SettingsMessages struct {
 	// LogLifetimeDays is the number of days to retain message logs.
 	// Must be at least 1 when provided.
 	LogLifetimeDays *int `json:"log_lifetime_days,omitempty" validate:"omitempty,min=1"`
+
+	// MessagesProcessingOrder defines the order in which messages are processed.
+	// Valid values are "LIFO" or "FIFO".
+	ProcessingOrder *MessagesProcessingOrder `json:"processing_order,omitempty" validate:"omitempty,oneof=LIFO FIFO"`
 }
 
 func (s SettingsMessages) Validate() error {
