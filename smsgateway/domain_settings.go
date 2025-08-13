@@ -65,8 +65,8 @@ func (s DeviceSettings) Validate() error {
 
 // SettingsEncryption contains settings related to message encryption.
 type SettingsEncryption struct {
-	// Passphrase is the encryption passphrase. If nil or empty, encryption is disabled.
-	Passphrase *string `json:"passphrase,omitempty"`
+	// Passphrase is the encryption passphrase. If nil or empty, encryption is disabled. Must not be used with Cloud Server.
+	Passphrase *string `json:"passphrase,omitempty" validate:"omitempty,isdefault"`
 }
 
 // SettingsMessages contains settings related to message handling.
@@ -131,6 +131,6 @@ type SettingsWebhooks struct {
 	// Must be at least 1 when provided.
 	RetryCount *int `json:"retry_count,omitempty" validate:"omitempty,min=1"`
 
-	// SigningKey is the secret key used for signing webhook payloads.
-	SigningKey *string `json:"signing_key,omitempty"`
+	// SigningKey is the secret key used for signing webhook payloads. Must not be used with Cloud Server.
+	SigningKey *string `json:"signing_key,omitempty" validate:"omitempty,isdefault"`
 }
