@@ -20,6 +20,8 @@ const (
 	WebhookEventSmsFailed WebhookEvent = "sms:failed"
 	// Triggered when the device pings the server.
 	WebhookEventSystemPing WebhookEvent = "system:ping"
+	// Triggered when an MMS is received.
+	WebhookEventMmsReceived WebhookEvent = "mms:received"
 )
 
 //nolint:gochecknoglobals // lookup table
@@ -30,6 +32,7 @@ var allEventTypes = map[WebhookEvent]struct{}{
 	WebhookEventSmsDelivered:    {},
 	WebhookEventSmsFailed:       {},
 	WebhookEventSystemPing:      {},
+	WebhookEventMmsReceived:     {},
 }
 
 // WebhookEventTypes returns a slice of all supported webhook event types.
@@ -41,6 +44,7 @@ func WebhookEventTypes() []WebhookEvent {
 		WebhookEventSmsDelivered,
 		WebhookEventSmsFailed,
 		WebhookEventSystemPing,
+		WebhookEventMmsReceived,
 	}
 }
 
