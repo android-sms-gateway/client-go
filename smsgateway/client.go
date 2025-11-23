@@ -14,17 +14,10 @@ import (
 const BaseURL = "https://api.sms-gate.app/3rdparty/v1"
 const settingsPath = "/settings"
 
-// BASE_URL is deprecated, use BaseURL instead
+// Deprecated: BASE_URL is kept for backward compatibility. Use BaseURL instead.
 //
 //nolint:revive,staticcheck // backward compatibility
 const BASE_URL = BaseURL
-
-type Config struct {
-	Client   *http.Client // Optional HTTP Client, defaults to `http.DefaultClient`
-	BaseURL  string       // Optional base URL, defaults to `https://api.sms-gate.app/3rdparty/v1`
-	User     string       // Required username
-	Password string       // Required password
-}
 
 type Client struct {
 	*rest.Client
@@ -38,14 +31,19 @@ func NewClient(config Config) *Client {
 		config.BaseURL = BaseURL
 	}
 
+	headers := make(map[string]string, 1)
+	if config.Token != "" {
+		headers["Authorization"] = "Bearer " + config.Token
+	} else {
+		headers["Authorization"] = "Basic " + base64.StdEncoding.EncodeToString([]byte(config.User+":"+config.Password))
+	}
+
 	return &Client{
 		Client: rest.NewClient(rest.Config{
 			Client:  config.Client,
 			BaseURL: config.BaseURL,
 		}),
-		headers: map[string]string{
-			"Authorization": "Basic " + base64.StdEncoding.EncodeToString([]byte(config.User+":"+config.Password)),
-		},
+		headers: headers,
 	}
 }
 
@@ -204,6 +202,31 @@ func (c *Client) DeleteWebhook(ctx context.Context, webhookID string) error {
 
 	if err := c.Do(ctx, http.MethodDelete, path, c.headers, nil, nil); err != nil {
 		return fmt.Errorf("failed to delete webhook: %w", err)
+	}
+
+	return nil
+}
+
+// GenerateToken generates a new access token with specified scopes and ttl.
+// Returns the generated token details or an error if the request fails.
+func (c *Client) GenerateToken(ctx context.Context, req TokenRequest) (TokenResponse, error) {
+	path := "/auth/token"
+	resp := new(TokenResponse)
+
+	if err := c.Do(ctx, http.MethodPost, path, c.headers, &req, resp); err != nil {
+		return *resp, fmt.Errorf("failed to generate token: %w", err)
+	}
+
+	return *resp, nil
+}
+
+// RevokeToken revokes an access token with the specified jti (token ID).
+// Returns an error if the revocation fails.
+func (c *Client) RevokeToken(ctx context.Context, jti string) error {
+	path := fmt.Sprintf("/auth/token/%s", url.PathEscape(jti))
+
+	if err := c.Do(ctx, http.MethodDelete, path, c.headers, nil, nil); err != nil {
+		return fmt.Errorf("failed to revoke token: %w", err)
 	}
 
 	return nil
