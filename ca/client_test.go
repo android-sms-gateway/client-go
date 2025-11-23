@@ -35,7 +35,11 @@ func TestClient_PostCSR(t *testing.T) {
 		}
 
 		w.WriteHeader(http.StatusAccepted)
-		_, _ = w.Write([]byte(`{"request_id":"123", "status":"pending", "message": "CSR submitted successfully. Await processing."}`))
+		_, _ = w.Write(
+			[]byte(
+				`{"request_id":"123", "status":"pending", "message": "CSR submitted successfully. Await processing."}`,
+			),
+		)
 	}))
 	defer server.Close()
 
@@ -96,7 +100,11 @@ func TestClient_GetCSRStatus(t *testing.T) {
 		defer r.Body.Close()
 
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"request_id":"123", "status":"approved", "message": "CSR approved. The certificate is ready for download.", "certificate":"-----BEGIN CERTIFICATE-----"}`))
+		_, _ = w.Write(
+			[]byte(
+				`{"request_id":"123", "status":"approved", "message": "CSR approved. The certificate is ready for download.", "certificate":"-----BEGIN CERTIFICATE-----"}`,
+			),
+		)
 	}))
 	defer server.Close()
 

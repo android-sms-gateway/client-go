@@ -1,7 +1,9 @@
 package ca
 
-//nolint:revive // backward compatibility
-const BASE_URL = "https://ca.sms-gate.app/api/v1"
+const BaseURL = "https://ca.sms-gate.app/api/v1"
+
+//nolint:revive,staticcheck // backward compatibility
+const BASE_URL = BaseURL
 
 var (
 	//nolint:gochecknoglobals // constant

@@ -1,26 +1,21 @@
 //nolint:lll // validator tags
 package smsgateway
 
-// The type of event.
+// PushEventType is the type of a push notification.
 type PushEventType string
 
 const (
-	// A message is enqueued.
-	PushMessageEnqueued PushEventType = "MessageEnqueued"
-	// Webhooks are updated.
-	PushWebhooksUpdated PushEventType = "WebhooksUpdated"
-	// Messages export is requested.
-	PushMessagesExportRequested PushEventType = "MessagesExportRequested"
-	// Settings are updated.
-	PushSettingsUpdated PushEventType = "SettingsUpdated"
+	PushMessageEnqueued         PushEventType = "MessageEnqueued"         // Message is enqueued.
+	PushWebhooksUpdated         PushEventType = "WebhooksUpdated"         // Webhooks are updated.
+	PushMessagesExportRequested PushEventType = "MessagesExportRequested" // Messages export is requested.
+	PushSettingsUpdated         PushEventType = "SettingsUpdated"         // Settings are updated.
 )
 
-// A push notification.
+// PushNotification represents a push notification.
+//
+// The token of the device that receives the notification.
 type PushNotification struct {
-	// The token of the device that receives the notification.
-	Token string `json:"token" validate:"required" example:"PyDmBQZZXYmyxMwED8Fzy"`
-	// The type of event.
-	Event PushEventType `json:"event" validate:"omitempty,oneof=MessageEnqueued WebhooksUpdated MessagesExportRequested SettingsUpdated" default:"MessageEnqueued" example:"MessageEnqueued"`
-	// The additional data associated with the event.
-	Data map[string]string `json:"data"`
+	Token string            `json:"token" validate:"required"                                                                      example:"PyDmBQZZXYmyxMwED8Fzy"` // The token of the device that receives the notification.
+	Event PushEventType     `json:"event" validate:"oneof=MessageEnqueued WebhooksUpdated MessagesExportRequested SettingsUpdated" example:"MessageEnqueued"`       // The type of event.
+	Data  map[string]string `json:"data"`                                                                                                                           // The additional data associated with the event.
 }

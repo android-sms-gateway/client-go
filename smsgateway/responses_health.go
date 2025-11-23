@@ -8,7 +8,16 @@ const (
 	HealthStatusFail HealthStatus = "fail"
 )
 
-// Details of a health check.
+// HealthCheck represents the result of a health check.
+//
+// Description is a human-readable description of the check.
+//
+// ObservedUnit is the unit of measurement for the observed value.
+//
+// ObservedValue is the observed value of the check.
+//
+// Status is the status of the check.
+// It can be one of the following values: "pass", "warn", or "fail".
 type HealthCheck struct {
 	// A human-readable description of the check.
 	Description string `json:"description,omitempty"`
@@ -21,10 +30,20 @@ type HealthCheck struct {
 	Status HealthStatus `json:"status"`
 }
 
-// Map of check names to their respective details.
+// HealthChecks is a map of check names to their respective details.
 type HealthChecks map[string]HealthCheck
 
-// Health status of the application.
+// HealthResponse represents the result of a health check.
+//
+// Status is the overall status of the application.
+// It can be one of the following values: "pass", "warn", or "fail".
+//
+// Version is the version of the application.
+//
+// ReleaseID is the release ID of the application.
+// It is used to identify the version of the application.
+//
+// Checks is a map of check names to their respective details.
 type HealthResponse struct {
 	// Overall status of the application.
 	// It can be one of the following values: "pass", "warn", or "fail".

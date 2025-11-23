@@ -18,7 +18,7 @@ func (c Config) Client() *http.Client {
 
 func (c Config) BaseURL() string {
 	if c.baseURL == "" {
-		return BASE_URL
+		return BaseURL
 	}
 	return c.baseURL
 }
