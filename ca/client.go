@@ -13,6 +13,21 @@ type Client struct {
 	*rest.Client
 }
 
+// NewClient creates a new instance of the CA API Client.
+func NewClient(options ...Option) *Client {
+	config := new(Config)
+	for _, option := range options {
+		option(config)
+	}
+
+	return &Client{
+		Client: rest.NewClient(rest.Config{
+			Client:  config.Client(),
+			BaseURL: config.BaseURL(),
+		}),
+	}
+}
+
 // PostCSR posts a Certificate Signing Request (CSR) to the Certificate Authority (CA) service.
 //
 // The service will validate the CSR and respond with a request ID.
@@ -39,19 +54,4 @@ func (c *Client) GetCSRStatus(ctx context.Context, requestID string) (GetCSRStat
 	}
 
 	return *resp, nil
-}
-
-// NewClient creates a new instance of the CA API Client.
-func NewClient(options ...Option) *Client {
-	config := new(Config)
-	for _, option := range options {
-		option(config)
-	}
-
-	return &Client{
-		Client: rest.NewClient(rest.Config{
-			Client:  config.Client(),
-			BaseURL: config.BaseURL(),
-		}),
-	}
 }

@@ -18,6 +18,14 @@ type Client struct {
 	config Config
 }
 
+func NewClient(config Config) *Client {
+	if config.Client == nil {
+		config.Client = http.DefaultClient
+	}
+
+	return &Client{config: config}
+}
+
 func (c *Client) Do(ctx context.Context, method, path string, headers map[string]string, payload, response any) error {
 	var reqBody io.Reader
 	if payload != nil {
@@ -46,7 +54,7 @@ func (c *Client) Do(ctx context.Context, method, path string, headers map[string
 	}
 	defer func() {
 		_, _ = io.Copy(io.Discard, resp.Body)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}()
 
 	if resp.StatusCode >= http.StatusBadRequest {
@@ -59,8 +67,8 @@ func (c *Client) Do(ctx context.Context, method, path string, headers map[string
 		return nil
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return fmt.Errorf("failed to decode response: %w", err)
+	if decErr := json.NewDecoder(resp.Body).Decode(&response); decErr != nil {
+		return fmt.Errorf("failed to decode response: %w", decErr)
 	}
 
 	return nil
@@ -80,12 +88,4 @@ func (c *Client) formatError(statusCode int, body []byte) error {
 
 	// All other client errors (400-499)
 	return fmt.Errorf("%w: unexpected status code %d with body %s", ErrClient, statusCode, string(body))
-}
-
-func NewClient(config Config) *Client {
-	if config.Client == nil {
-		config.Client = http.DefaultClient
-	}
-
-	return &Client{config: config}
 }

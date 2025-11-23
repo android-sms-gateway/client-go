@@ -11,7 +11,7 @@ const (
 	LogEntryPriorityError LogEntryPriority = "ERROR"
 )
 
-// LogEntry represents a log entry
+// LogEntry represents a log entry.
 type LogEntry struct {
 	// A unique identifier for the log entry.
 	ID uint64 `json:"id"`

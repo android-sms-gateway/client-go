@@ -7,10 +7,9 @@ import (
 )
 
 type (
-	// Processing state
+	// ProcessingState represents the state of a message.
 	ProcessingState string
-
-	// Message priority
+	// MessagePriority represents the priority of a message.
 	MessagePriority int8
 )
 
@@ -36,52 +35,58 @@ var allProcessStates = map[ProcessingState]struct{}{
 	ProcessingStateFailed:    {},
 }
 
-// Text SMS message
+// TextMessage represents an SMS message with a text body.
+//
+// Text is the message text.
 type TextMessage struct {
-	// Message text
+	// Text is the message text.
 	Text string `json:"text" validate:"required,min=1,max=65535" example:"Hello World!"`
 }
 
-// Data SMS message
+// DataMessage represents an SMS message with a binary payload.
+//
+// Data is the base64-encoded payload.
+//
+// Port is the destination port.
 type DataMessage struct {
-	// Base64-encoded payload
+	// Data is the base64-encoded payload.
 	Data string `json:"data" validate:"required,base64,min=4,max=65535" example:"SGVsbG8gV29ybGQh" format:"byte"`
-	// Destination port
-	Port uint16 `json:"port" validate:"required,min=1,max=65535" example:"53739"`
+	// Port is the destination port.
+	Port uint16 `json:"port" validate:"required,min=1,max=65535"        example:"53739"`
 }
 
-// Message
+// Message represents an SMS message.
+//
+// ID is the message ID (if not set - will be generated).
+// DeviceID is the optional device ID for explicit selection.
+// Message is the message content (deprecated, use TextMessage instead).
+// TextMessage is the text message.
+// DataMessage is the data message.
+// PhoneNumbers is the list of phone numbers.
+// IsEncrypted is true if the message is encrypted.
+// SimNumber is the SIM card number (1-3), if not set - default SIM will be used.
+// WithDeliveryReport is true if the message should request a delivery report.
+// Priority is the priority of the message, messages with values greater than `99` will bypass limits and delays.
+// TTL is the time to live in seconds (conflicts with `ValidUntil`).
+// ValidUntil is the time until the message is valid (conflicts with `TTL`).
 type Message struct {
-	// ID (if not set - will be generated)
-	ID string `json:"id,omitempty" validate:"omitempty,max=36" example:"PyDmBQZZXYmyxMwED8Fzy"`
-	// Optional device ID for explicit selection
-	DeviceID string `json:"deviceId,omitempty" validate:"omitempty,max=21" example:"PyDmBQZZXYmyxMwED8Fzy"`
+	ID       string `json:"id,omitempty"       validate:"omitempty,max=36" example:"PyDmBQZZXYmyxMwED8Fzy"` // ID (if not set - will be generated)
+	DeviceID string `json:"deviceId,omitempty" validate:"omitempty,max=21" example:"PyDmBQZZXYmyxMwED8Fzy"` // Optional device ID for explicit selection
 
-	// Message content
-	// Deprecated: use TextMessage instead
-	Message string `json:"message,omitempty" validate:"omitempty,max=65535" example:"Hello World!"`
+	Message string `json:"message,omitempty" validate:"omitempty,max=65535" example:"Hello World!"` // Message content (deprecated, use TextMessage instead)
 
-	// Text message
-	TextMessage *TextMessage `json:"textMessage,omitempty" validate:"omitempty"`
-	// Data message
-	DataMessage *DataMessage `json:"dataMessage,omitempty" validate:"omitempty"`
+	TextMessage *TextMessage `json:"textMessage,omitempty" validate:"omitempty"` // Text message
+	DataMessage *DataMessage `json:"dataMessage,omitempty" validate:"omitempty"` // Data message
 
-	// Recipients (phone numbers)
-	PhoneNumbers []string `json:"phoneNumbers" validate:"required,min=1,max=100,dive,required,min=1,max=128" example:"79990001234"`
-	// Is encrypted
-	IsEncrypted bool `json:"isEncrypted,omitempty" example:"true"`
+	PhoneNumbers []string `json:"phoneNumbers"          validate:"required,min=1,max=100,dive,required,min=1,max=128" example:"79990001234"` // Recipients (phone numbers)
+	IsEncrypted  bool     `json:"isEncrypted,omitempty"                                                               example:"true"`        // Is encrypted
 
-	// SIM card number (1-3), if not set - default SIM will be used
-	SimNumber *uint8 `json:"simNumber,omitempty" validate:"omitempty,max=3" example:"1"`
-	// With delivery report
-	WithDeliveryReport *bool `json:"withDeliveryReport,omitempty" example:"true"`
-	// Priority, messages with values greater than `99` will bypass limits and delays
-	Priority MessagePriority `json:"priority,omitempty" validate:"omitempty,min=-128,max=127" example:"0" default:"0"`
+	SimNumber          *uint8          `json:"simNumber,omitempty"          validate:"omitempty,max=3"            example:"1"`                // SIM card number (1-3), if not set - default SIM will be used
+	WithDeliveryReport *bool           `json:"withDeliveryReport,omitempty"                                       example:"true"`             // With delivery report
+	Priority           MessagePriority `json:"priority,omitempty"           validate:"omitempty,min=-128,max=127" example:"0"    default:"0"` // Priority, messages with values greater than `99` will bypass limits and delays
 
-	// Time to live in seconds (conflicts with `validUntil`)
-	TTL *uint64 `json:"ttl,omitempty" validate:"omitempty,min=5" example:"86400"`
-	// Valid until (conflicts with `ttl`)
-	ValidUntil *time.Time `json:"validUntil,omitempty" example:"2020-01-01T00:00:00Z"`
+	TTL        *uint64    `json:"ttl,omitempty"        validate:"omitempty,min=5" example:"86400"`                // Time to live in seconds (conflicts with `ValidUntil`)
+	ValidUntil *time.Time `json:"validUntil,omitempty"                            example:"2020-01-01T00:00:00Z"` // Valid until (conflicts with `TTL`)
 }
 
 // GetTextMessage returns the TextMessage, if it was set explicitly, or
@@ -135,22 +140,21 @@ func (m *Message) Validate() error {
 	return nil
 }
 
-// Message state
+// MessageState represents the state of a message.
+//
+// MessageState is a struct used to communicate the state of a message
+// between the client and the server. It contains the message ID, device ID,
+// state, and hashed and encrypted flags. Additionally, it contains a slice
+// of RecipientState, representing the state of each recipient, and a map
+// of states, representing the history of states for the message.
 type MessageState struct {
-	// Message ID
-	ID string `json:"id" validate:"required,max=36" example:"PyDmBQZZXYmyxMwED8Fzy"`
-	// Device ID
-	DeviceID string `json:"deviceId" validate:"required,max=21" example:"PyDmBQZZXYmyxMwED8Fzy"`
-	// State
-	State ProcessingState `json:"state" validate:"required" example:"Pending"`
-	// Hashed
-	IsHashed bool `json:"isHashed" example:"false"`
-	// Encrypted
-	IsEncrypted bool `json:"isEncrypted" example:"false"`
-	// Recipients states
-	Recipients []RecipientState `json:"recipients" validate:"required,min=1,dive"`
-	// History of states
-	States map[string]time.Time `json:"states"`
+	ID          string               `json:"id"          validate:"required,max=36"     example:"PyDmBQZZXYmyxMwED8Fzy"` // Message ID
+	DeviceID    string               `json:"deviceId"    validate:"required,max=21"     example:"PyDmBQZZXYmyxMwED8Fzy"` // Device ID
+	State       ProcessingState      `json:"state"       validate:"required"            example:"Pending"`               // State
+	IsHashed    bool                 `json:"isHashed"                                   example:"false"`                 // Hashed
+	IsEncrypted bool                 `json:"isEncrypted"                                example:"false"`                 // Encrypted
+	Recipients  []RecipientState     `json:"recipients"  validate:"required,min=1,dive"`                                 // Recipients states
+	States      map[string]time.Time `json:"states"`                                                                     // History of states
 }
 
 func (m MessageState) Validate() error {
@@ -163,12 +167,13 @@ func (m MessageState) Validate() error {
 	return nil
 }
 
-// Recipient state
+// RecipientState represents the state of a recipient.
+//
+// RecipientState is a struct used to communicate the state of a recipient
+// between the client and the server. It contains the phone number or first 16
+// symbols of the SHA256 hash, state, and error information.
 type RecipientState struct {
-	// Phone number or first 16 symbols of SHA256 hash
-	PhoneNumber string `json:"phoneNumber" validate:"required,min=1,max=128" example:"79990001234"`
-	// State
-	State ProcessingState `json:"state" validate:"required" example:"Pending"`
-	// Error (for `Failed` state)
-	Error *string `json:"error,omitempty" example:"timeout"`
+	PhoneNumber string          `json:"phoneNumber"     validate:"required,min=1,max=128" example:"79990001234"` // Phone number or first 16 symbols of SHA256 hash
+	State       ProcessingState `json:"state"           validate:"required"               example:"Pending"`     // State
+	Error       *string         `json:"error,omitempty"                                   example:"timeout"`     // Error (for `Failed` state)
 }

@@ -90,7 +90,7 @@ func TestSettingsMessages_Validate(t *testing.T) {
 	}
 }
 
-// Helper function to create a pointer to an int
+// Helper function to create a pointer to an int.
 func ptr(i int) *int {
 	return &i
 }

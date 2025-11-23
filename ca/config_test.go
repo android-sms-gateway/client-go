@@ -54,7 +54,7 @@ func TestConfig_BaseURL(t *testing.T) {
 		{
 			name:   "Without Base URL",
 			option: ca.WithBaseURL(""),
-			want:   ca.BASE_URL,
+			want:   ca.BaseURL,
 		},
 	}
 	for _, tt := range tests {

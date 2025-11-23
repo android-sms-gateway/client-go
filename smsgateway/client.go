@@ -11,9 +11,13 @@ import (
 	"github.com/android-sms-gateway/client-go/rest"
 )
 
-//nolint:revive // backward compatibility
-const BASE_URL = "https://api.sms-gate.app/3rdparty/v1"
+const BaseURL = "https://api.sms-gate.app/3rdparty/v1"
 const settingsPath = "/settings"
+
+// BASE_URL is deprecated, use BaseURL instead
+//
+//nolint:revive,staticcheck // backward compatibility
+const BASE_URL = BaseURL
 
 type Config struct {
 	Client   *http.Client // Optional HTTP Client, defaults to `http.DefaultClient`
@@ -28,7 +32,24 @@ type Client struct {
 	headers map[string]string
 }
 
-// Send enqueues a message for sending
+// NewClient creates a new instance of the API Client.
+func NewClient(config Config) *Client {
+	if config.BaseURL == "" {
+		config.BaseURL = BaseURL
+	}
+
+	return &Client{
+		Client: rest.NewClient(rest.Config{
+			Client:  config.Client,
+			BaseURL: config.BaseURL,
+		}),
+		headers: map[string]string{
+			"Authorization": "Basic " + base64.StdEncoding.EncodeToString([]byte(config.User+":"+config.Password)),
+		},
+	}
+}
+
+// Send enqueues a message for sending.
 func (c *Client) Send(ctx context.Context, message Message, options ...SendOption) (MessageState, error) {
 	opts := new(SendOptions).Apply(options...)
 	path := "/messages?" + opts.ToURLValues().Encode()
@@ -41,7 +62,7 @@ func (c *Client) Send(ctx context.Context, message Message, options ...SendOptio
 	return *resp, nil
 }
 
-// GetState returns message state by ID
+// GetState returns message state by ID.
 func (c *Client) GetState(ctx context.Context, messageID string) (MessageState, error) {
 	path := fmt.Sprintf("/messages/%s", url.PathEscape(messageID))
 	resp := new(MessageState)
@@ -53,7 +74,7 @@ func (c *Client) GetState(ctx context.Context, messageID string) (MessageState, 
 	return *resp, nil
 }
 
-// ListDevices returns registered devices
+// ListDevices returns registered devices.
 func (c *Client) ListDevices(ctx context.Context) ([]Device, error) {
 	path := "/devices"
 	var devices []Device
@@ -65,7 +86,7 @@ func (c *Client) ListDevices(ctx context.Context) ([]Device, error) {
 	return devices, nil
 }
 
-// DeleteDevice removes a device by ID
+// DeleteDevice removes a device by ID.
 func (c *Client) DeleteDevice(ctx context.Context, id string) error {
 	path := fmt.Sprintf("/devices/%s", url.PathEscape(id))
 
@@ -76,7 +97,7 @@ func (c *Client) DeleteDevice(ctx context.Context, id string) error {
 	return nil
 }
 
-// CheckHealth returns service health status
+// CheckHealth returns service health status.
 func (c *Client) CheckHealth(ctx context.Context) (HealthResponse, error) {
 	path := "/health"
 	resp := new(HealthResponse)
@@ -88,7 +109,7 @@ func (c *Client) CheckHealth(ctx context.Context) (HealthResponse, error) {
 	return *resp, nil
 }
 
-// ExportInbox exports messages via webhooks
+// ExportInbox exports messages via webhooks.
 func (c *Client) ExportInbox(ctx context.Context, req MessagesExportRequest) error {
 	path := "/inbox/export"
 
@@ -99,7 +120,7 @@ func (c *Client) ExportInbox(ctx context.Context, req MessagesExportRequest) err
 	return nil
 }
 
-// GetLogs retrieves log entries
+// GetLogs retrieves log entries.
 func (c *Client) GetLogs(ctx context.Context, from, to time.Time) ([]LogEntry, error) {
 	query := url.Values{}
 	query.Set("from", from.Format(time.RFC3339))
@@ -114,7 +135,7 @@ func (c *Client) GetLogs(ctx context.Context, from, to time.Time) ([]LogEntry, e
 	return logs, nil
 }
 
-// GetSettings returns current settings
+// GetSettings returns current settings.
 func (c *Client) GetSettings(ctx context.Context) (DeviceSettings, error) {
 	path := settingsPath
 	resp := new(DeviceSettings)
@@ -126,7 +147,7 @@ func (c *Client) GetSettings(ctx context.Context) (DeviceSettings, error) {
 	return *resp, nil
 }
 
-// UpdateSettings partially updates settings
+// UpdateSettings partially updates settings.
 func (c *Client) UpdateSettings(ctx context.Context, settings DeviceSettings) (DeviceSettings, error) {
 	path := settingsPath
 	resp := new(DeviceSettings)
@@ -138,7 +159,7 @@ func (c *Client) UpdateSettings(ctx context.Context, settings DeviceSettings) (D
 	return *resp, nil
 }
 
-// ReplaceSettings replaces all settings
+// ReplaceSettings replaces all settings.
 func (c *Client) ReplaceSettings(ctx context.Context, settings DeviceSettings) (DeviceSettings, error) {
 	path := settingsPath
 	resp := new(DeviceSettings)
@@ -186,21 +207,4 @@ func (c *Client) DeleteWebhook(ctx context.Context, webhookID string) error {
 	}
 
 	return nil
-}
-
-// NewClient creates a new instance of the API Client.
-func NewClient(config Config) *Client {
-	if config.BaseURL == "" {
-		config.BaseURL = BASE_URL
-	}
-
-	return &Client{
-		Client: rest.NewClient(rest.Config{
-			Client:  config.Client,
-			BaseURL: config.BaseURL,
-		}),
-		headers: map[string]string{
-			"Authorization": "Basic " + base64.StdEncoding.EncodeToString([]byte(config.User+":"+config.Password)),
-		},
-	}
 }

@@ -2,7 +2,7 @@ package webhooks
 
 import "github.com/android-sms-gateway/client-go/smsgateway"
 
-// Deprecated: use smsgateway package instead.
+// EventType is deprecated: use smsgateway package instead.
 type EventType = smsgateway.WebhookEvent
 
 const (
@@ -23,5 +23,5 @@ func IsValidEventType(e EventType) bool {
 	return smsgateway.IsValidWebhookEvent(e)
 }
 
-// Deprecated: use smsgateway package instead.
+// Webhook is deprecated: use smsgateway package instead.
 type Webhook = smsgateway.Webhook
