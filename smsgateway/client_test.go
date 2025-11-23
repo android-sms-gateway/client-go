@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"reflect"
 	"testing"
 	"time"
@@ -19,11 +20,12 @@ const (
 )
 
 type mockServerExpectedInput struct {
-	method      string
-	path        string
-	query       string
-	contentType string
-	body        string
+	method        string
+	path          string
+	query         string
+	authorization string
+	contentType   string
+	body          string
 }
 
 type mockServerOutput struct {
@@ -32,6 +34,10 @@ type mockServerOutput struct {
 }
 
 func newMockServer(input mockServerExpectedInput, output mockServerOutput) *httptest.Server {
+	if input.authorization == "" {
+		input.authorization = authorizationHeader
+	}
+
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != input.method {
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -48,7 +54,7 @@ func newMockServer(input mockServerExpectedInput, output mockServerOutput) *http
 			return
 		}
 
-		if r.Header.Get("Authorization") != authorizationHeader {
+		if r.Header.Get("Authorization") != input.authorization {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
@@ -76,6 +82,43 @@ func newClient(baseURL string) *smsgateway.Client {
 		BaseURL:  baseURL,
 		User:     username,
 		Password: password,
+	})
+}
+
+func newJWTClient(baseURL string) *smsgateway.Client {
+	return smsgateway.NewClient(smsgateway.Config{
+		BaseURL: baseURL,
+		Token:   password,
+	})
+}
+
+func TestJWTClient_Send(t *testing.T) {
+	server := newMockServer(mockServerExpectedInput{
+		method:        http.MethodPost,
+		path:          "/messages",
+		authorization: "Bearer " + password,
+		contentType:   "application/json",
+		body:          `{"textMessage":{"text":"Hello World!"},"phoneNumbers":["+1234567890"]}`,
+	}, mockServerOutput{
+		code: http.StatusCreated,
+		body: `{}`,
+	})
+	defer server.Close()
+
+	client := newJWTClient(server.URL)
+
+	t.Run("Success", func(t *testing.T) {
+		message := smsgateway.Message{
+			TextMessage: &smsgateway.TextMessage{
+				Text: "Hello World!",
+			},
+			PhoneNumbers: []string{"+1234567890"},
+		}
+
+		_, err := client.Send(context.Background(), message)
+		if err != nil {
+			t.Errorf("Send() error = %v", err)
+		}
 	})
 }
 
@@ -507,6 +550,7 @@ func TestClient_DeleteDevice(t *testing.T) {
 			wantErr: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := tt.c.DeleteDevice(context.Background(), tt.args.deviceID); (err != nil) != tt.wantErr {
@@ -517,308 +561,428 @@ func TestClient_DeleteDevice(t *testing.T) {
 }
 
 func TestClient_CheckHealth(t *testing.T) {
-	t.Run("Success", func(t *testing.T) {
-		server := newMockServer(mockServerExpectedInput{
-			method: http.MethodGet,
-			path:   "/health",
-		}, mockServerOutput{
-			code: http.StatusOK,
-			body: `{"checks":{"db:ping":{"description":"Failed sequential pings count","observedValue":0,"status":"pass"}},"releaseId":1117,"status":"pass","version":"v1.24.0"}`,
-		})
-		defer server.Close()
-
-		client := newClient(server.URL)
-
-		health, err := client.CheckHealth(context.Background())
-		if err != nil {
-			t.Fatalf("CheckHealth failed: %v", err)
-		}
-		if health.Status != "pass" {
-			t.Errorf("Expected status 'pass', got '%s'", health.Status)
-		}
-	})
-
-	t.Run("InternalError", func(t *testing.T) {
-		server := newMockServer(mockServerExpectedInput{
-			method: http.MethodGet,
-			path:   "/health",
-		}, mockServerOutput{
-			code: http.StatusInternalServerError,
-		})
-		defer server.Close()
-
-		client := newClient(server.URL)
-
-		_, err := client.CheckHealth(context.Background())
-		if err == nil {
-			t.Fatal("Expected error for internal server error")
-		}
-	})
-}
-
-func TestClient_ExportInbox(t *testing.T) {
-	server := newMockServer(mockServerExpectedInput{
-		method: http.MethodPost,
-		path:   "/inbox/export",
-		body:   `{"deviceId":"dev1","since":"2024-01-01T00:00:00Z","until":"2024-01-02T00:00:00Z"}`,
-	}, mockServerOutput{
-		code: http.StatusNoContent,
-	})
-	defer server.Close()
-
-	client := newClient(server.URL)
-
 	tests := []struct {
 		name    string
-		args    smsgateway.MessagesExportRequest
+		code    int
+		body    string
+		want    smsgateway.HealthResponse
 		wantErr bool
 	}{
 		{
-			name: "Success",
-			args: smsgateway.MessagesExportRequest{
-				DeviceID: "dev1",
-				Since:    time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-				Until:    time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
-			},
+			name:    "Success",
+			code:    http.StatusOK,
+			body:    `{"status": "ok"}`,
+			want:    smsgateway.HealthResponse{Status: "ok"},
 			wantErr: false,
 		},
 		{
-			name: "Invalid request",
-			args: smsgateway.MessagesExportRequest{
-				DeviceID: "dev1",
-				Since:    time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
-				Until:    time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-			},
+			name:    "Error response",
+			code:    http.StatusInternalServerError,
+			body:    `{"error": "internal error"}`,
+			want:    smsgateway.HealthResponse{},
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := client.ExportInbox(context.Background(), tt.args); (err != nil) != tt.wantErr {
-				t.Errorf("Client.ExportInbox() error = %v, wantErr %v", err, tt.wantErr)
+			server := newMockServer(mockServerExpectedInput{
+				method: http.MethodGet,
+				path:   "/health",
+			}, mockServerOutput{
+				code: tt.code,
+				body: tt.body,
+			})
+			defer server.Close()
+
+			client := newClient(server.URL)
+			resp, err := client.CheckHealth(context.Background())
+			if (err != nil) != tt.wantErr {
+				t.Errorf("CheckHealth error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr && !reflect.DeepEqual(resp, tt.want) {
+				t.Errorf("CheckHealth response = %v, want %v", resp, tt.want)
+			}
+		})
+	}
+}
+
+func TestClient_ExportInbox(t *testing.T) {
+	tests := []struct {
+		name    string
+		req     smsgateway.MessagesExportRequest
+		code    int
+		wantErr bool
+	}{
+		{
+			name: "Success",
+			req: smsgateway.MessagesExportRequest{
+				DeviceID: "qTRWxZkF",
+				Since:    time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+				Until:    time.Date(2023, 1, 2, 0, 0, 0, 0, time.UTC),
+			},
+			code:    http.StatusOK,
+			wantErr: false,
+		},
+		{
+			name:    "Error response",
+			req:     smsgateway.MessagesExportRequest{},
+			code:    http.StatusInternalServerError,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := newMockServer(mockServerExpectedInput{
+				method:      http.MethodPost,
+				path:        "/inbox/export",
+				contentType: "application/json",
+				body:        `{"deviceId":"qTRWxZkF","since":"2023-01-01T00:00:00Z","until":"2023-01-02T00:00:00Z"}`,
+			}, mockServerOutput{
+				code: tt.code,
+				body: `{}`,
+			})
+			defer server.Close()
+
+			client := newClient(server.URL)
+			err := client.ExportInbox(context.Background(), tt.req)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ExportInbox error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
 }
 
 func TestClient_GetLogs(t *testing.T) {
-	server := newMockServer(mockServerExpectedInput{
-		method: http.MethodGet,
-		path:   "/logs",
-		query:  "from=2024-01-01T00%3A00%3A00Z&to=2024-01-02T00%3A00%3A00Z",
-	}, mockServerOutput{
-		code: http.StatusOK,
-		body: `[{"id":1,"message":"Test log"}]`,
-	})
-	defer server.Close()
-
-	client := newClient(server.URL)
-
+	from := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2023, 1, 2, 0, 0, 0, 0, time.UTC)
 	tests := []struct {
-		name string
-		args struct {
-			from time.Time
-			to   time.Time
-		}
+		name    string
+		code    int
+		body    string
 		want    []smsgateway.LogEntry
 		wantErr bool
 	}{
 		{
 			name: "Success",
-			args: struct {
-				from time.Time
-				to   time.Time
-			}{
-				from: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-				to:   time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
-			},
+			code: http.StatusOK,
+			body: `[{"createdAt":"2023-01-01T00:00:00Z","message":"test"}]`,
 			want: []smsgateway.LogEntry{
 				{
-					ID:      1,
-					Message: "Test log",
+					Message:   "test",
+					CreatedAt: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
 				},
 			},
 			wantErr: false,
 		},
 		{
-			name: "Invalid request",
-			args: struct {
-				from time.Time
-				to   time.Time
-			}{
-				from: time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
-				to:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-			},
+			name:    "Error response",
+			code:    http.StatusInternalServerError,
+			body:    `{"error": "internal error"}`,
+			want:    nil,
 			wantErr: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := client.GetLogs(context.Background(), tt.args.from, tt.args.to)
+			server := newMockServer(mockServerExpectedInput{
+				method: http.MethodGet,
+				path:   "/logs",
+				query: "from=" + url.QueryEscape(
+					from.Format(time.RFC3339),
+				) + "&to=" + url.QueryEscape(
+					to.Format(time.RFC3339),
+				),
+			}, mockServerOutput{
+				code: tt.code,
+				body: tt.body,
+			})
+			defer server.Close()
+
+			client := newClient(server.URL)
+			logs, err := client.GetLogs(context.Background(), from, to)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("Client.GetLogs() error = %v, wantErr %v", err, tt.wantErr)
-				return
+				t.Errorf("GetLogs error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Client.GetLogs() got = %v, want %v", got, tt.want)
+			if !tt.wantErr && !reflect.DeepEqual(logs, tt.want) {
+				t.Errorf("GetLogs logs = %v, want %v", logs, tt.want)
 			}
 		})
 	}
 }
 
 func TestClient_GetSettings(t *testing.T) {
-	t.Run("Success", func(t *testing.T) {
-		server := newMockServer(mockServerExpectedInput{
-			method: http.MethodGet,
-			path:   "/settings",
-		}, mockServerOutput{
-			code: http.StatusOK,
-			body: `{"messages":{"limit_period":"PerDay","limit_value":100}}`,
-		})
-		defer server.Close()
-
-		client := newClient(server.URL)
-
-		settings, err := client.GetSettings(context.Background())
-		if err != nil {
-			t.Fatalf("GetSettings failed: %v", err)
-		}
-		if *settings.Messages.LimitPeriod != smsgateway.PerDay {
-			t.Errorf("Expected limit period 'PerDay', got '%v'", *settings.Messages.LimitPeriod)
-		}
-	})
-
-	t.Run("Error", func(t *testing.T) {
-		server := newMockServer(mockServerExpectedInput{
-			method: http.MethodGet,
-			path:   "/settings",
-		}, mockServerOutput{
-			code: http.StatusInternalServerError,
-		})
-		defer server.Close()
-
-		client := newClient(server.URL)
-
-		_, err := client.GetSettings(context.Background())
-		if err == nil {
-			t.Fatal("Expected error for internal server error")
-		}
-	})
-}
-
-func TestClient_UpdateSettings(t *testing.T) {
-	server := newMockServer(mockServerExpectedInput{
-		method:      http.MethodPatch,
-		path:        "/settings",
-		contentType: "application/json",
-		body:        `{"messages":{"limit_period":"PerHour","limit_value":50}}`,
-	}, mockServerOutput{
-		code: http.StatusOK,
-		body: `{"messages":{"limit_period":"PerHour","limit_value":50}}`,
-	})
-	defer server.Close()
-
-	client := newClient(server.URL)
-
-	limitPeriod := smsgateway.PerHour
-	limitValue := 50
 	tests := []struct {
-		name     string
-		args     smsgateway.DeviceSettings
-		expected smsgateway.DeviceSettings
-		wantErr  bool
+		name    string
+		code    int
+		body    string
+		want    smsgateway.DeviceSettings
+		wantErr bool
 	}{
 		{
 			name: "Success",
-			args: smsgateway.DeviceSettings{
+			code: http.StatusOK,
+			body: `{"messages":{"log_lifetime_days":30}}`,
+			want: smsgateway.DeviceSettings{
 				Messages: &smsgateway.SettingsMessages{
-					LimitPeriod: &limitPeriod,
-					LimitValue:  &limitValue,
-				},
-			},
-			expected: smsgateway.DeviceSettings{
-				Messages: &smsgateway.SettingsMessages{
-					LimitPeriod: &limitPeriod,
-					LimitValue:  &limitValue,
+					LogLifetimeDays: ptr(30),
 				},
 			},
 			wantErr: false,
 		},
 		{
-			name:     "Error",
-			args:     smsgateway.DeviceSettings{},
-			expected: smsgateway.DeviceSettings{},
-			wantErr:  true,
+			name:    "Error response",
+			code:    http.StatusInternalServerError,
+			body:    `{"error": "internal error"}`,
+			want:    smsgateway.DeviceSettings{},
+			wantErr: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := client.UpdateSettings(context.Background(), tt.args)
+			server := newMockServer(mockServerExpectedInput{
+				method: http.MethodGet,
+				path:   "/settings",
+			}, mockServerOutput{
+				code: tt.code,
+				body: tt.body,
+			})
+			defer server.Close()
+
+			client := newClient(server.URL)
+			settings, err := client.GetSettings(context.Background())
 			if (err != nil) != tt.wantErr {
-				t.Errorf("Client.UpdateSettings() error = %v, wantErr %v", err, tt.wantErr)
-				return
+				t.Errorf("GetSettings error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if !reflect.DeepEqual(got, tt.expected) {
-				t.Errorf("Client.UpdateSettings() got = %v, want %v", got, tt.expected)
+			if !tt.wantErr && !reflect.DeepEqual(settings, tt.want) {
+				t.Errorf("GetSettings settings = %v, want %v", settings, tt.want)
+			}
+		})
+	}
+}
+
+func TestClient_UpdateSettings(t *testing.T) {
+	tests := []struct {
+		name     string
+		settings smsgateway.DeviceSettings
+		code     int
+		body     string
+		want     smsgateway.DeviceSettings
+		wantErr  bool
+	}{
+		{
+			name: "Success",
+			settings: smsgateway.DeviceSettings{
+				Messages: &smsgateway.SettingsMessages{
+					LogLifetimeDays: ptr(30),
+				},
+			},
+			code: http.StatusOK,
+			body: `{"messages":{"log_lifetime_days":30}}`,
+			want: smsgateway.DeviceSettings{
+				Messages: &smsgateway.SettingsMessages{
+					LogLifetimeDays: ptr(30),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Error response",
+			settings: smsgateway.DeviceSettings{
+				Messages: &smsgateway.SettingsMessages{
+					LogLifetimeDays: ptr(30),
+				},
+			},
+			code:    http.StatusInternalServerError,
+			body:    `{"error": "internal error"}`,
+			want:    smsgateway.DeviceSettings{},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := newMockServer(mockServerExpectedInput{
+				method:      http.MethodPatch,
+				path:        "/settings",
+				contentType: "application/json",
+				body:        `{"messages":{"log_lifetime_days":30}}`,
+			}, mockServerOutput{
+				code: tt.code,
+				body: tt.body,
+			})
+			defer server.Close()
+
+			client := newClient(server.URL)
+			resp, err := client.UpdateSettings(context.Background(), tt.settings)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("UpdateSettings error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr && !reflect.DeepEqual(resp, tt.want) {
+				t.Errorf("UpdateSettings response = %v, want %v", resp, tt.want)
 			}
 		})
 	}
 }
 
 func TestClient_ReplaceSettings(t *testing.T) {
-	server := newMockServer(mockServerExpectedInput{
-		method:      http.MethodPut,
-		path:        "/settings",
-		contentType: "application/json",
-		body:        `{"messages":{"limit_period":"PerHour","limit_value":50}}`,
-	}, mockServerOutput{
-		code: http.StatusOK,
-		body: `{"messages":{"limit_period":"PerHour","limit_value":50}}`,
-	})
-	defer server.Close()
-
-	client := newClient(server.URL)
-
-	limitPeriod := smsgateway.PerHour
-	limitValue := 50
 	tests := []struct {
 		name     string
-		args     smsgateway.DeviceSettings
-		expected smsgateway.DeviceSettings
+		settings smsgateway.DeviceSettings
+		code     int
+		body     string
+		want     smsgateway.DeviceSettings
 		wantErr  bool
 	}{
 		{
 			name: "Success",
-			args: smsgateway.DeviceSettings{
+			settings: smsgateway.DeviceSettings{
 				Messages: &smsgateway.SettingsMessages{
-					LimitPeriod: &limitPeriod,
-					LimitValue:  &limitValue,
+					LogLifetimeDays: ptr(30),
 				},
 			},
-			expected: smsgateway.DeviceSettings{
+			code: http.StatusOK,
+			body: `{"messages":{"log_lifetime_days":30}}`,
+			want: smsgateway.DeviceSettings{
 				Messages: &smsgateway.SettingsMessages{
-					LimitPeriod: &limitPeriod,
-					LimitValue:  &limitValue,
+					LogLifetimeDays: ptr(30),
 				},
 			},
 			wantErr: false,
 		},
 		{
-			name:     "Error",
-			args:     smsgateway.DeviceSettings{},
-			expected: smsgateway.DeviceSettings{},
-			wantErr:  true,
+			name: "Error response",
+			settings: smsgateway.DeviceSettings{
+				Messages: &smsgateway.SettingsMessages{
+					LogLifetimeDays: ptr(30),
+				},
+			},
+			code:    http.StatusInternalServerError,
+			body:    `{"error": "internal error"}`,
+			want:    smsgateway.DeviceSettings{},
+			wantErr: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := client.ReplaceSettings(context.Background(), tt.args)
+			server := newMockServer(mockServerExpectedInput{
+				method:      http.MethodPut,
+				path:        "/settings",
+				contentType: "application/json",
+				body:        `{"messages":{"log_lifetime_days":30}}`,
+			}, mockServerOutput{
+				code: tt.code,
+				body: tt.body,
+			})
+			defer server.Close()
+
+			client := newClient(server.URL)
+			resp, err := client.ReplaceSettings(context.Background(), tt.settings)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("Client.UpdateSettings() error = %v, wantErr %v", err, tt.wantErr)
-				return
+				t.Errorf("ReplaceSettings error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if !reflect.DeepEqual(got, tt.expected) {
-				t.Errorf("Client.ReplaceSettings() got = %v, want %v", got, tt.expected)
+			if !tt.wantErr && !reflect.DeepEqual(resp, tt.want) {
+				t.Errorf("ReplaceSettings response = %v, want %v", resp, tt.want)
+			}
+		})
+	}
+}
+
+func TestClient_GenerateToken(t *testing.T) {
+	tests := []struct {
+		name    string
+		req     smsgateway.TokenRequest
+		code    int
+		body    string
+		want    smsgateway.TokenResponse
+		wantErr bool
+	}{
+		{
+			name: "Success",
+			req:  smsgateway.TokenRequest{Scopes: []string{"messages:read"}, TTL: 3600},
+			code: http.StatusOK,
+			body: `{"id":"token_id_example","token_type":"Bearer","access_token":"access_token_example","expires_at":"2025-01-01T00:00:00Z"}`,
+			want: smsgateway.TokenResponse{
+				ID:          "token_id_example",
+				TokenType:   "Bearer",
+				AccessToken: "access_token_example",
+				ExpiresAt:   time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+			},
+			wantErr: false,
+		},
+		{
+			name:    "Error response",
+			req:     smsgateway.TokenRequest{Scopes: []string{"messages:read"}, TTL: 3600},
+			code:    http.StatusInternalServerError,
+			body:    `{"error": "internal error"}`,
+			want:    smsgateway.TokenResponse{},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := newMockServer(mockServerExpectedInput{
+				method:      http.MethodPost,
+				path:        "/auth/token",
+				contentType: "application/json",
+				body:        `{"ttl":3600,"scopes":["messages:read"]}`,
+			}, mockServerOutput{
+				code: tt.code,
+				body: tt.body,
+			})
+			defer server.Close()
+
+			client := newClient(server.URL)
+			resp, err := client.GenerateToken(context.Background(), tt.req)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GenerateToken error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr && !reflect.DeepEqual(resp, tt.want) {
+				t.Errorf("GenerateToken response = %v, want %v", resp, tt.want)
+			}
+		})
+	}
+}
+
+func TestClient_RevokeToken(t *testing.T) {
+	tests := []struct {
+		name    string
+		jti     string
+		code    int
+		wantErr bool
+	}{
+		{
+			name:    "Success",
+			jti:     "abc123",
+			code:    http.StatusNoContent,
+			wantErr: false,
+		},
+		{
+			name:    "Error response",
+			jti:     "abc123",
+			code:    http.StatusInternalServerError,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := newMockServer(mockServerExpectedInput{
+				method: http.MethodDelete,
+				path:   "/auth/token/abc123",
+			}, mockServerOutput{
+				code: tt.code,
+			})
+			defer server.Close()
+
+			client := newClient(server.URL)
+			err := client.RevokeToken(context.Background(), tt.jti)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("RevokeToken error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
