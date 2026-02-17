@@ -52,7 +52,7 @@ type DataMessage struct {
 	// Data is the base64-encoded payload.
 	Data string `json:"data" validate:"required,base64,min=4,max=65535" example:"SGVsbG8gV29ybGQh" format:"byte"`
 	// Port is the destination port.
-	Port uint16 `json:"port" validate:"required,min=1,max=65535"        example:"53739"`
+	Port uint16 `json:"port" validate:"required,min=1,max=65535" example:"53739"`
 }
 
 // Message represents an SMS message.

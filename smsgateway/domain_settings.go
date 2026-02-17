@@ -54,6 +54,9 @@ type DeviceSettings struct {
 
 	// Webhooks contains settings related to webhook functionality.
 	Webhooks *SettingsWebhooks `json:"webhooks,omitempty"`
+
+	// Gateway contains settings related to the gateway.
+	Gateway *SettingsGateway `json:"gateway,omitempty"`
 }
 
 func (s DeviceSettings) Validate() error {
@@ -133,4 +136,16 @@ type SettingsWebhooks struct {
 
 	// SigningKey is the secret key used for signing webhook payloads. Must not be used with Cloud Server.
 	SigningKey *string `json:"signing_key,omitempty" validate:"omitempty,isdefault"`
+}
+
+// SettingsGateway contains settings related to the gateway.
+type SettingsGateway struct {
+	// CloudURL is the URL of the cloud server. Must not be used with Cloud Server.
+	CloudURL *string `json:"cloud_url,omitempty" validate:"omitempty,isdefault,url"`
+
+	// PrivateToken is the auth token for the private server. Must not be used with Cloud Server.
+	PrivateToken *string `json:"private_token,omitempty" validate:"omitempty,isdefault"`
+
+	// NotificationChannel is the way device receives notifications.
+	NotificationChannel *string `json:"notification_channel,omitempty" validate:"omitempty,oneof=AUTO SSE_ONLY"`
 }
