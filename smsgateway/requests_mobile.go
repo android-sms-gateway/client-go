@@ -12,7 +12,7 @@ type MobileRegisterRequest struct {
 	Name *string `json:"name,omitempty" validate:"omitempty,max=128" example:"Android Phone"`
 	// FCM token of the device (optional)
 	// +optional
-	PushToken *string `json:"pushToken"      validate:"omitempty,max=256" example:"gHz-T6NezDlOfllr7F-Be"`
+	PushToken *string `json:"pushToken" validate:"omitempty,max=256" example:"gHz-T6NezDlOfllr7F-Be"`
 }
 
 // MobileUpdateRequest represents a request to update a mobile device.
@@ -39,9 +39,9 @@ type MobileChangePasswordRequest struct {
 // MobilePatchMessageItem represents a single message patch request.
 type MobilePatchMessageItem struct {
 	// Message ID
-	ID string `json:"id"         validate:"required,max=36"     example:"PyDmBQZZXYmyxMwED8Fzy"`
+	ID string `json:"id" validate:"required,max=36" example:"PyDmBQZZXYmyxMwED8Fzy"`
 	// State
-	State ProcessingState `json:"state"      validate:"required"            example:"Pending"`
+	State ProcessingState `json:"state" validate:"required" example:"Pending"`
 	// Recipients states
 	Recipients []RecipientState `json:"recipients" validate:"required,min=1,dive"`
 	// History of states
