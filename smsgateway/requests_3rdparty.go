@@ -20,7 +20,7 @@ func (o *SendOptions) Apply(options ...SendOption) *SendOptions {
 	return o
 }
 
-// ToURLValues returns the SendOptions as a URL query string in the form of url.Values.
+// ToURLValues returns the SendOptions as a URL query string in the form of [url.Values].
 // It includes only the options that have been set.
 func (o *SendOptions) ToURLValues() url.Values {
 	values := url.Values{}
