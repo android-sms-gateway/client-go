@@ -24,8 +24,8 @@ type TokenRequest struct {
 //
 // The ExpiresAt field contains the time at which the access token is no longer valid.
 type TokenResponse struct {
-	ID          string    `json:"id"`           // unique identifier for the access token
-	TokenType   string    `json:"token_type"`   // type of the access token
-	AccessToken string    `json:"access_token"` // actual access token
-	ExpiresAt   time.Time `json:"expires_at"`   // time at which the access token is no longer valid
+	ID          string    `json:"id"`                              // unique identifier for the access token
+	TokenType   string    `json:"token_type"`                      // type of the access token
+	AccessToken string    `json:"access_token"`                    // actual access token
+	ExpiresAt   time.Time `json:"expires_at"   format:"date-time"` // time at which the access token is no longer valid
 }

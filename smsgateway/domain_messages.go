@@ -81,7 +81,7 @@ type Message struct {
 	PhoneNumbers []string `json:"phoneNumbers"          validate:"required,min=1,max=100,dive,required,min=1,max=128" example:"79990001234"` // Recipients (phone numbers)
 	IsEncrypted  bool     `json:"isEncrypted,omitempty"                                                               example:"true"`        // Is encrypted
 
-	SimNumber          *uint8          `json:"simNumber,omitempty"          validate:"omitempty,max=3"            example:"1"`                // SIM card number (1-3), if not set - default SIM will be used
+	SimNumber          *uint8          `json:"simNumber,omitempty"          validate:"omitempty,min=1,max=3"      example:"1"`                // SIM card number (1-3), if not set - default SIM will be used
 	WithDeliveryReport *bool           `json:"withDeliveryReport,omitempty"                                       example:"true"`             // With delivery report
 	Priority           MessagePriority `json:"priority,omitempty"           validate:"omitempty,min=-128,max=127" example:"0"    default:"0"` // Priority, messages with values greater than `99` will bypass limits and delays
 
