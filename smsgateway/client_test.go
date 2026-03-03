@@ -948,6 +948,63 @@ func TestClient_GenerateToken(t *testing.T) {
 	}
 }
 
+func TestClient_RefreshToken(t *testing.T) {
+	tests := []struct {
+		name         string
+		refreshToken string
+		code         int
+		body         string
+		want         smsgateway.TokenResponse
+		wantErr      bool
+	}{
+		{
+			name:         "Success",
+			refreshToken: "refresh_token_example",
+			code:         http.StatusOK,
+			body:         `{"id":"token_id_example","token_type":"Bearer","access_token":"access_token_example","refresh_token":"refresh_token_example_new","expires_at":"2025-01-01T00:00:00Z"}`,
+			want: smsgateway.TokenResponse{
+				ID:           "token_id_example",
+				TokenType:    "Bearer",
+				AccessToken:  "access_token_example",
+				RefreshToken: "refresh_token_example_new",
+				ExpiresAt:    time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+			},
+			wantErr: false,
+		},
+		{
+			name:         "Error response",
+			refreshToken: "refresh_token_example",
+			code:         http.StatusInternalServerError,
+			body:         `{"error": "internal error"}`,
+			want:         smsgateway.TokenResponse{},
+			wantErr:      true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := newMockServer(mockServerExpectedInput{
+				method:        http.MethodPost,
+				path:          "/auth/refresh",
+				authorization: "Bearer " + tt.refreshToken,
+			}, mockServerOutput{
+				code: tt.code,
+				body: tt.body,
+			})
+			defer server.Close()
+
+			client := newClient(server.URL)
+			resp, err := client.RefreshToken(context.Background(), tt.refreshToken)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("RefreshToken error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr && !reflect.DeepEqual(resp, tt.want) {
+				t.Errorf("RefreshToken response = %v, want %v", resp, tt.want)
+			}
+		})
+	}
+}
+
 func TestClient_RevokeToken(t *testing.T) {
 	tests := []struct {
 		name    string
