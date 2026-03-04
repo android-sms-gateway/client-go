@@ -220,6 +220,22 @@ func (c *Client) GenerateToken(ctx context.Context, req TokenRequest) (TokenResp
 	return *resp, nil
 }
 
+// RefreshToken exchanges a refresh token for a new token pair.
+// Returns the refreshed token details or an error if the request fails.
+func (c *Client) RefreshToken(ctx context.Context, refreshToken string) (TokenResponse, error) {
+	path := "/auth/refresh"
+	resp := new(TokenResponse)
+	headers := map[string]string{
+		"Authorization": "Bearer " + refreshToken,
+	}
+
+	if err := c.Do(ctx, http.MethodPost, path, headers, nil, resp); err != nil {
+		return *resp, fmt.Errorf("failed to refresh token: %w", err)
+	}
+
+	return *resp, nil
+}
+
 // RevokeToken revokes an access token with the specified jti (token ID).
 // Returns an error if the revocation fails.
 func (c *Client) RevokeToken(ctx context.Context, jti string) error {
