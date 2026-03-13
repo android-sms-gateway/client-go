@@ -8,37 +8,40 @@ import (
 type WebhookEvent = string
 
 const (
-	WebhookEventMmsReceived     WebhookEvent = "mms:received"      // Triggered when an MMS is received.
+	WebhookEventSmsReceived     WebhookEvent = "sms:received"      // Triggered when an SMS is received.
 	WebhookEventSmsDataReceived WebhookEvent = "sms:data-received" // Triggered when a data SMS is received.
+	WebhookEventSmsSent         WebhookEvent = "sms:sent"          // Triggered when an SMS is sent.
 	WebhookEventSmsDelivered    WebhookEvent = "sms:delivered"     // Triggered when an SMS is delivered.
 	WebhookEventSmsFailed       WebhookEvent = "sms:failed"        // Triggered when an SMS processing fails.
-	WebhookEventSmsReceived     WebhookEvent = "sms:received"      // Triggered when an SMS is received.
-	WebhookEventSmsSent         WebhookEvent = "sms:sent"          // Triggered when an SMS is sent.
 	WebhookEventSystemPing      WebhookEvent = "system:ping"       // Triggered when the device pings the server.
+	WebhookEventMmsReceived     WebhookEvent = "mms:received"      // Triggered when an MMS is received.
+	WebhookEventMmsDownloaded   WebhookEvent = "mms:downloaded"    // Triggered when an MMS is downloaded.
 )
 
-//nolint:gochecknoglobals // lookup table
-var allEventTypes = map[WebhookEvent]struct{}{
-	WebhookEventSmsReceived:     {},
-	WebhookEventSmsDataReceived: {},
-	WebhookEventSmsSent:         {},
-	WebhookEventSmsDelivered:    {},
-	WebhookEventSmsFailed:       {},
-	WebhookEventSystemPing:      {},
-	WebhookEventMmsReceived:     {},
+//nolint:gochecknoglobals // single source of truth for all webhook event types
+var webhookEventTypes = []WebhookEvent{
+	WebhookEventSmsReceived,
+	WebhookEventSmsDataReceived,
+	WebhookEventSmsSent,
+	WebhookEventSmsDelivered,
+	WebhookEventSmsFailed,
+	WebhookEventSystemPing,
+	WebhookEventMmsReceived,
+	WebhookEventMmsDownloaded,
 }
+
+//nolint:gochecknoglobals // lookup table derived from webhookEventTypes
+var allEventTypes = func() map[WebhookEvent]struct{} {
+	m := make(map[WebhookEvent]struct{}, len(webhookEventTypes))
+	for _, event := range webhookEventTypes {
+		m[event] = struct{}{}
+	}
+	return m
+}()
 
 // WebhookEventTypes returns a slice of all supported webhook event types.
 func WebhookEventTypes() []WebhookEvent {
-	return []WebhookEvent{
-		WebhookEventSmsReceived,
-		WebhookEventSmsDataReceived,
-		WebhookEventSmsSent,
-		WebhookEventSmsDelivered,
-		WebhookEventSmsFailed,
-		WebhookEventSystemPing,
-		WebhookEventMmsReceived,
-	}
+	return append([]WebhookEvent(nil), webhookEventTypes...)
 }
 
 // IsValidWebhookEvent checks if the webhook event is a valid type.
