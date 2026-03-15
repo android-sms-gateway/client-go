@@ -22,7 +22,7 @@ type LogEntry struct {
 	// A message describing the log event.
 	Message string `json:"message"`
 	// Additional context information related to the log entry, typically including data relevant to the log event.
-	Context map[string]string `json:"context"`
+	Context map[string]any `json:"context"`
 	// The timestamp when this log entry was created.
 	CreatedAt time.Time `json:"createdAt"`
 }
