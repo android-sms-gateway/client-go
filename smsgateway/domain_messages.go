@@ -43,6 +43,13 @@ type TextMessage struct {
 	Text string `json:"text" validate:"required,min=1,max=65535" example:"Hello World!"`
 }
 
+// HashedMessage represents an SMS message with a hashed payload.
+//
+// Hash is the SHA256 hash of the message content (text or data).
+type HashedMessage struct {
+	Hash string `json:"hash" validate:"required,sha256" example:"1d4b6e3b1b6e3b1b6e3b1b6e3b1b6e3b1b6e3b1b"`
+}
+
 // DataMessage represents an SMS message with a binary payload.
 //
 // Data is the base64-encoded payload.
@@ -155,6 +162,11 @@ type MessageState struct {
 	IsEncrypted bool                 `json:"isEncrypted"                                example:"false"`                 // Encrypted
 	Recipients  []RecipientState     `json:"recipients"  validate:"required,min=1,dive"`                                 // Recipients states
 	States      map[string]time.Time `json:"states"`                                                                     // History of states
+
+	TextMessage   *TextMessage   `json:"textMessage,omitempty"`   // Present only when `includeContent=true` and the message type is text.
+	DataMessage   *DataMessage   `json:"dataMessage,omitempty"`   // Present only when `includeContent=true` and the message type is data.
+	HashedMessage *HashedMessage `json:"hashedMessage,omitempty"` // Hashed message content, if isHashed is true
+
 }
 
 func (m MessageState) Validate() error {
