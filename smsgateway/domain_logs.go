@@ -24,5 +24,5 @@ type LogEntry struct {
 	// Additional context information related to the log entry, typically including data relevant to the log event.
 	Context map[string]any `json:"context"`
 	// The timestamp when this log entry was created.
-	CreatedAt time.Time `json:"createdAt"`
+	CreatedAt time.Time `json:"createdAt" format:"date-time"`
 }
