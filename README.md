@@ -1,4 +1,3 @@
-<!-- Anchor for back to top links -->
 <a id="readme-top"></a>
 
 <!-- PROJECT SHIELDS -->
@@ -10,52 +9,72 @@
 [![Stars][stars-shield]][stars-url]
 [![Issues][issues-shield]][issues-url]
 
+<!-- PROJECT LOGO -->
+<br />
+<div align="center">
+  <a href="https://github.com/android-sms-gateway/client-go">
+    <img src="https://github.com/capcom6/android-sms-gateway/raw/master/assets/logo.png" alt="Logo" width="100" height="100">
+  </a>
+
+<h3 align="center">client-go</h3>
+
+  <p align="center">
+    Go client library for SMSGate APIs.
+    <br />
+    <a href="https://api.sms-gate.app/"><strong>Explore API docs »</strong></a>
+    <br />
+    <br />
+    <a href="https://github.com/android-sms-gateway/client-go/issues">Report Bug</a>
+    ·
+    <a href="https://github.com/android-sms-gateway/client-go/issues">Request Feature</a>
+  </p>
+</div>
+
 <!-- TABLE OF CONTENTS -->
-- [📱 About The Project](#-about-the-project)
-- [🌟 Features](#-features)
-- [⚙️ Prerequisites](#️-prerequisites)
-- [📦 Installation](#-installation)
-- [🛠️ Usage Examples](#️-usage-examples)
-- [📚 API Reference](#-api-reference)
-- [🤝 Contributing](#-contributing)
-- [📄 License](#-license)
+- [About The Project](#about-the-project)
+- [Built With](#built-with)
+- [Getting Started](#getting-started)
+	- [Prerequisites](#prerequisites)
+	- [Installation](#installation)
+- [Usage](#usage)
+	- [SMSGate client (`smsgateway`)](#smsgate-client-smsgateway)
+	- [Certificate Authority client (`ca`)](#certificate-authority-client-ca)
+- [API Coverage](#api-coverage)
+	- [`smsgateway.Client`](#smsgatewayclient)
+	- [`ca.Client`](#caclient)
+- [Contributing](#contributing)
+- [License](#license)
 
 
 <!-- ABOUT THE PROJECT -->
-## 📱 About The Project
+## About The Project
 
-This is a Go client library for interfacing with the [SMS Gateway for Android™ API](https://sms-gate.app). It provides a simple and efficient way to integrate SMS functionality into your Go applications, with features like message sending, status checking, and webhook management.
+`client-go` provides typed clients for the SMSGate ecosystem:
 
-Key value propositions:
-- Lightweight and easy to integrate
-- Comprehensive API coverage
-- Built with Go best practices
+- `smsgateway` package for 3rd-party API operations (messages, devices, health, logs, settings, webhooks, and token lifecycle).
+- `ca` package for Certificate Authority workflows (submit CSR and check CSR status).
+- Shared low-level HTTP handling in the `rest` package.
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-<!-- FEATURES -->
-## 🌟 Features
-
-- Send SMS messages with a simple method call.
-- Check the state of sent messages.
-- Webhooks management.
-- Customizable base URL for use with local, cloud or private servers.
+The library supports both Basic authentication (`user` + `password`) and Bearer token authentication for the SMSGate client.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-<!-- PREREQUISITES -->
-## ⚙️ Prerequisites
+## Built With
 
-Before you begin, ensure you have met the following requirements:
-- You have a basic understanding of Go.
-- You have Go installed on your local machine.
+- [Go](https://go.dev/) 1.22+
+- Standard `net/http` client with configurable transport
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-<!-- INSTALLATION -->
-## 📦 Installation
+<!-- GETTING STARTED -->
+## Getting Started
 
-To install the SMS Gateway API Client in the existing project, run this command in your terminal:
+### Prerequisites
+
+- Go 1.22 or newer
+- SMSGate account/device credentials and/or API token
+
+### Installation
 
 ```bash
 go get github.com/android-sms-gateway/client-go
@@ -64,14 +83,9 @@ go get github.com/android-sms-gateway/client-go
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- USAGE EXAMPLES -->
-## 🛠️ Usage Examples
+## Usage
 
-Here's how to get started with the SMS Gateway API Client:
-
-1. Import the [`github.com/android-sms-gateway/client-go/smsgateway`](smsgateway/) package.
-2. Create a new client with configuration using the `smsgateway.NewClient()` method.
-3. Use the `Send()` method to send an SMS message.
-4. Use the `GetState()` method to check the status of a sent message.
+### SMSGate client (`smsgateway`)
 
 ```go
 package main
@@ -85,70 +99,96 @@ import (
 )
 
 func main() {
-	// Create a client with configuration from environment variables.
+	ctx := context.Background()
+
 	client := smsgateway.NewClient(smsgateway.Config{
 		User:     os.Getenv("ASG_USERNAME"),
 		Password: os.Getenv("ASG_PASSWORD"),
+		// or use Token: os.Getenv("ASG_TOKEN"),
 	})
 
-	// Create a message to send.
-	message := smsgateway.Message{
-		TextMessage: &smsgateway.TextMessage{
-			Text: "Hello, doctors!",
-		},
+	state, err := client.Send(ctx, smsgateway.Message{
+		TextMessage: &smsgateway.TextMessage{Text: "Hello from Go"},
 		PhoneNumbers: []string{
 			"+15555550100",
-			"+15555550101",
 		},
-	}
-
-	// Send the message and get the response.
-	status, err := client.Send(context.Background(), message)
+	})
 	if err != nil {
-		log.Fatalf("failed to send message: %v", err)
+		log.Fatal(err)
 	}
 
-	log.Printf("Send message response: %+v", status)
+	log.Printf("message queued: %s", state.ID)
+}
+```
 
-	// Get the state of the message and print the response.
-	status, err = client.GetState(context.Background(), status.ID)
+### Certificate Authority client (`ca`)
+
+```go
+package main
+
+import (
+	"context"
+	"log"
+
+	"github.com/android-sms-gateway/client-go/ca"
+)
+
+func main() {
+	ctx := context.Background()
+	client := ca.NewClient()
+
+	resp, err := client.PostCSR(ctx, ca.PostCSRRequest{
+		Type:    ca.CSRTypeWebhook,
+		Content: "-----BEGIN CERTIFICATE REQUEST-----...",
+	})
 	if err != nil {
-		log.Fatalf("failed to get state: %v", err)
+		log.Fatal(err)
 	}
 
-	log.Printf("Get state response: %+v", status)
+	log.Printf("request id: %s, status: %s", resp.RequestID, resp.Status)
 }
 ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-<!-- API REFERENCE -->
-## 📚 API Reference
+## API Coverage
 
-For more information on the API endpoints and data structures, please consult the [SMS Gateway for Android API documentation](https://api.sms-gate.app/).
+### `smsgateway.Client`
+
+- Messages: `Send`, `GetState`
+- Devices: `ListDevices`, `DeleteDevice`
+- Health: `CheckHealth`
+- Inbox export: `ExportInbox`
+- Logs: `GetLogs`
+- Settings: `GetSettings`, `UpdateSettings`, `ReplaceSettings`
+- Webhooks: `ListWebhooks`, `RegisterWebhook`, `DeleteWebhook`
+- Token management: `GenerateToken`, `RefreshToken`, `RevokeToken`
+
+For endpoint semantics and payload details, see https://api.sms-gate.app/
+
+### `ca.Client`
+
+- CSR workflows: `PostCSR`, `GetCSRStatus`
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- CONTRIBUTING -->
-## 🤝 Contributing
+## Contributing
 
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+Contributions are welcome. Please open an issue to discuss major changes before submitting a pull request.
 
-If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
-Don't forget to give the project a star! Thanks again!
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/my-change`)
+3. Commit your changes (`git commit -m 'Describe change'`)
+4. Push to your branch
 5. Open a Pull Request
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- LICENSE -->
-## 📄 License
+## License
 
-Distributed under the Apache-2.0 License. See [`LICENSE`](LICENSE) for more information.
+Distributed under the Apache-2.0 License. See [`LICENSE`](LICENSE) for details.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
