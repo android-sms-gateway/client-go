@@ -77,23 +77,24 @@ type DataMessage struct {
 // TTL is the time to live in seconds (conflicts with `ValidUntil`).
 // ValidUntil is the time until the message is valid (conflicts with `TTL`).
 type Message struct {
-	ID       string `json:"id,omitempty"       validate:"omitempty,max=36" example:"PyDmBQZZXYmyxMwED8Fzy"` // ID (if not set - will be generated)
-	DeviceID string `json:"deviceId,omitempty" validate:"omitempty,max=21" example:"PyDmBQZZXYmyxMwED8Fzy"` // Optional device ID for explicit selection
+	ID       string `json:"id,omitempty"       example:"PyDmBQZZXYmyxMwED8Fzy" validate:"omitempty,max=36"` // ID (if not set - will be generated)
+	DeviceID string `json:"deviceId,omitempty" example:"PyDmBQZZXYmyxMwED8Fzy" validate:"omitempty,max=21"` // Optional device ID for explicit selection
 
-	Message string `json:"message,omitempty" validate:"omitempty,max=65535" example:"Hello World!"` // Message content (deprecated, use TextMessage instead)
+	Message string `json:"message,omitempty" example:"Hello World!" validate:"omitempty,max=65535"` // Message content (deprecated, use TextMessage instead)
 
 	TextMessage *TextMessage `json:"textMessage,omitempty" validate:"omitempty"` // Text message
 	DataMessage *DataMessage `json:"dataMessage,omitempty" validate:"omitempty"` // Data message
 
-	PhoneNumbers []string `json:"phoneNumbers"          validate:"required,min=1,max=100,dive,required,min=1,max=128" example:"79990001234"` // Recipients (phone numbers)
-	IsEncrypted  bool     `json:"isEncrypted,omitempty"                                                               example:"true"`        // Is encrypted
+	PhoneNumbers []string `json:"phoneNumbers"          example:"79990001234" validate:"required,min=1,max=100,dive,required,min=1,max=128"` // Recipients (phone numbers)
+	IsEncrypted  bool     `json:"isEncrypted,omitempty" example:"true"`                                                                      // Is encrypted
 
-	SimNumber          *uint8          `json:"simNumber,omitempty"          validate:"omitempty,min=1,max=3"      example:"1"`                // SIM card number (1-3), if not set - default SIM will be used
-	WithDeliveryReport *bool           `json:"withDeliveryReport,omitempty"                                       example:"true"`             // With delivery report
-	Priority           MessagePriority `json:"priority,omitempty"           validate:"omitempty,min=-128,max=127" example:"0"    default:"0"` // Priority, messages with values greater than `99` will bypass limits and delays
+	SimNumber          *uint8          `json:"simNumber,omitempty"          example:"1"    validate:"omitempty,min=1,max=3"`                  // SIM card number (1-3), if not set - default SIM will be used
+	WithDeliveryReport *bool           `json:"withDeliveryReport,omitempty" example:"true"`                                                   // With delivery report
+	Priority           MessagePriority `json:"priority,omitempty"           example:"0"    validate:"omitempty,min=-128,max=127" default:"0"` // Priority, messages with values greater than `99` will bypass limits and delays
 
-	TTL        *uint64    `json:"ttl,omitempty"        validate:"omitempty,min=5" example:"86400"`                // Time to live in seconds (conflicts with `ValidUntil`)
-	ValidUntil *time.Time `json:"validUntil,omitempty"                            example:"2020-01-01T00:00:00Z"` // Valid until (conflicts with `TTL`)
+	TTL        *uint64    `json:"ttl,omitempty"        example:"86400"                validate:"omitempty,min=5"`                    // Time to live in seconds (conflicts with `ValidUntil`)
+	ValidUntil *time.Time `json:"validUntil,omitempty" example:"2020-01-01T00:00:00Z"                            format:"date-time"` // Valid until (conflicts with `TTL`)
+	ScheduleAt *time.Time `json:"scheduleAt,omitempty" example:"2020-01-01T08:30:00Z"                            format:"date-time"` // Schedule message delivery at (must be in the future)
 }
 
 // GetTextMessage returns the TextMessage, if it was set explicitly, or
@@ -142,6 +143,10 @@ func (m *Message) Validate() error {
 
 	if m.TTL != nil && m.ValidUntil != nil {
 		return fmt.Errorf("%w: ttl and validUntil", ErrConflictFields)
+	}
+
+	if m.ScheduleAt != nil && !m.ScheduleAt.After(time.Now()) {
+		return fmt.Errorf("%w: scheduleAt must be in the future", ErrValidationFailed)
 	}
 
 	return nil
