@@ -275,6 +275,33 @@ func TestMessage_Validate(t *testing.T) {
 			},
 			err: smsgateway.ErrConflictFields,
 		},
+		{
+			name: "Valid - ScheduleAt set to future time",
+			message: smsgateway.Message{
+				Message:      "Hello World!",
+				ScheduleAt:   func() *time.Time { val := time.Now().Add(time.Hour); return &val }(),
+				PhoneNumbers: []string{"1234567890"},
+			},
+			err: nil,
+		},
+		{
+			name: "Invalid - ScheduleAt set to past time",
+			message: smsgateway.Message{
+				Message:      "Hello World!",
+				ScheduleAt:   func() *time.Time { val := time.Now().Add(-time.Hour); return &val }(),
+				PhoneNumbers: []string{"1234567890"},
+			},
+			err: smsgateway.ErrValidationFailed,
+		},
+		{
+			name: "Invalid - ScheduleAt set to current time",
+			message: smsgateway.Message{
+				Message:      "Hello World!",
+				ScheduleAt:   func() *time.Time { val := time.Now(); return &val }(),
+				PhoneNumbers: []string{"1234567890"},
+			},
+			err: smsgateway.ErrValidationFailed,
+		},
 	}
 
 	for _, tt := range tests {
