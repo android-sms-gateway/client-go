@@ -3,27 +3,18 @@ package smsgateway
 import "time"
 
 // MobileRegisterRequest represents a request to register a mobile device.
-//
-// The Name field contains the name of the device, and the PushToken field
-// contains the FCM token of the device.
 type MobileRegisterRequest struct {
-	// Name of the device (optional)
-	// +optional
-	Name *string `json:"name,omitempty" validate:"omitempty,max=128" example:"Android Phone"`
-	// FCM token of the device (optional)
-	// +optional
-	PushToken *string `json:"pushToken" validate:"omitempty,max=256" example:"gHz-T6NezDlOfllr7F-Be"`
+	Name      *string   `json:"name,omitempty"     validate:"omitempty,max=128" example:"Android Phone"`         // Name of the device (optional)
+	PushToken *string   `json:"pushToken"          validate:"omitempty,max=256" example:"gHz-T6NezDlOfllr7F-Be"` // FCM token of the device (optional)
+	SimCards  []SimCard `json:"simCards,omitempty"`                                                              // SIM cards (optional)
 }
 
 // MobileUpdateRequest represents a request to update a mobile device.
-//
-// The Id field contains the device ID.
-//
-// The PushToken field contains the FCM token of the device.
 type MobileUpdateRequest struct {
 	//nolint:revive,staticcheck // backward compatibility
-	Id        string `json:"id"        example:"QslD_GefqiYV6RQXdkM6V"`                              // Device ID
-	PushToken string `json:"pushToken" example:"gHz-T6NezDlOfllr7F-Be" validate:"omitempty,max=256"` // FCM token of the device (optional)
+	Id        string    `json:"id"                 example:"QslD_GefqiYV6RQXdkM6V"`                              // Device ID
+	PushToken string    `json:"pushToken"          example:"gHz-T6NezDlOfllr7F-Be" validate:"omitempty,max=256"` // FCM token of the device (optional)
+	SimCards  []SimCard `json:"simCards,omitempty"`                                                              // SIM cards (optional)
 }
 
 // MobileChangePasswordRequest represents a request to change the password of a mobile device.
