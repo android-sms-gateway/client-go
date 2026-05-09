@@ -10,8 +10,8 @@ import "time"
 // The Scopes field defines the scopes for which the access token is valid.
 // At least one scope must be provided.
 type TokenRequest struct {
-	TTL    uint64   `json:"ttl,omitempty"`                                         // lifetime of the access token in seconds
-	Scopes []string `json:"scopes"        validate:"required,min=1,dive,required"` // scopes for which the access token is valid
+	TTL    uint64     `json:"ttl,omitempty"`                                         // lifetime of the access token in seconds
+	Scopes []JWTScope `json:"scopes"        validate:"required,min=1,dive,required"` // scopes for which the access token is valid
 }
 
 // TokenResponse represents a response to a TokenRequest.
