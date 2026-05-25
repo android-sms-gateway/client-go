@@ -3,6 +3,7 @@ package smsgateway
 import (
 	"net/url"
 	"strconv"
+	"time"
 )
 
 type SendOption func(*SendOptions)
@@ -47,4 +48,76 @@ func WithDeviceActiveWithin(hours uint) SendOption {
 	return func(o *SendOptions) {
 		o.deviceActiveWithin = &hours
 	}
+}
+
+// ListInboxOptions holds optional filters for listing inbox messages.
+type ListInboxOptions struct {
+	Type     *IncomingMessageType
+	Limit    *int
+	Offset   *int
+	From     *time.Time
+	To       *time.Time
+	DeviceID *string
+}
+
+// ToURLValues returns the ListInboxOptions as URL query parameters.
+func (o ListInboxOptions) ToURLValues() url.Values {
+	values := url.Values{}
+	if o.Type != nil {
+		values.Set("type", string(*o.Type))
+	}
+	if o.Limit != nil {
+		values.Set("limit", strconv.Itoa(*o.Limit))
+	}
+	if o.Offset != nil {
+		values.Set("offset", strconv.Itoa(*o.Offset))
+	}
+	if o.From != nil {
+		values.Set("from", o.From.Format(time.RFC3339))
+	}
+	if o.To != nil {
+		values.Set("to", o.To.Format(time.RFC3339))
+	}
+	if o.DeviceID != nil {
+		values.Set("deviceId", *o.DeviceID)
+	}
+	return values
+}
+
+// ListMessagesOptions holds optional filters for listing messages.
+type ListMessagesOptions struct {
+	From           *time.Time
+	To             *time.Time
+	State          *string
+	DeviceID       *string
+	Limit          *int
+	Offset         *int
+	IncludeContent *bool
+}
+
+// ToURLValues returns the ListMessagesOptions as URL query parameters.
+func (o ListMessagesOptions) ToURLValues() url.Values {
+	values := url.Values{}
+	if o.From != nil {
+		values.Set("from", o.From.Format(time.RFC3339))
+	}
+	if o.To != nil {
+		values.Set("to", o.To.Format(time.RFC3339))
+	}
+	if o.State != nil {
+		values.Set("state", *o.State)
+	}
+	if o.DeviceID != nil {
+		values.Set("deviceId", *o.DeviceID)
+	}
+	if o.Limit != nil {
+		values.Set("limit", strconv.Itoa(*o.Limit))
+	}
+	if o.Offset != nil {
+		values.Set("offset", strconv.Itoa(*o.Offset))
+	}
+	if o.IncludeContent != nil {
+		values.Set("includeContent", strconv.FormatBool(*o.IncludeContent))
+	}
+	return values
 }

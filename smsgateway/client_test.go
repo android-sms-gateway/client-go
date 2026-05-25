@@ -29,8 +29,9 @@ type mockServerExpectedInput struct {
 }
 
 type mockServerOutput struct {
-	code int
-	body string
+	code    int
+	body    string
+	headers map[string]string
 }
 
 func newMockServer(input mockServerExpectedInput, output mockServerOutput) *httptest.Server {
@@ -72,6 +73,9 @@ func newMockServer(input mockServerExpectedInput, output mockServerOutput) *http
 			return
 		}
 
+		for k, v := range output.headers {
+			w.Header().Set(k, v)
+		}
 		w.WriteHeader(output.code)
 		_, _ = w.Write([]byte(output.body))
 	}))
@@ -985,7 +989,7 @@ func TestClient_RefreshToken(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			server := newMockServer(mockServerExpectedInput{
 				method:        http.MethodPost,
-				path:          "/auth/refresh",
+				path:          "/auth/token/refresh",
 				authorization: "Bearer " + tt.refreshToken,
 			}, mockServerOutput{
 				code: tt.code,
@@ -1043,4 +1047,582 @@ func TestClient_RevokeToken(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestClient_ListInboxMessages(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		server := newMockServer(mockServerExpectedInput{
+			method: http.MethodGet,
+			path:   "/inbox",
+		}, mockServerOutput{
+			code: http.StatusOK,
+			body: `[{"id":"1","type":"SMS","sender":"+1234567890","contentPreview":"Hello","createdAt":"2025-01-01T00:00:00Z"}]`,
+		})
+		defer server.Close()
+
+		client := newClient(server.URL)
+		msgs, total, err := client.ListInboxMessages(context.Background(), smsgateway.ListInboxOptions{})
+		if err != nil {
+			t.Errorf("Expected no error, got %v", err)
+		}
+		if len(msgs) != 1 {
+			t.Errorf("Expected 1 message, got %d", len(msgs))
+		}
+		if total != 0 {
+			t.Errorf("Expected total 0, got %d", total)
+		}
+	})
+
+	t.Run("Success with X-Total-Count", func(t *testing.T) {
+		server := newMockServer(mockServerExpectedInput{
+			method: http.MethodGet,
+			path:   "/inbox",
+		}, mockServerOutput{
+			code: http.StatusOK,
+			body: `[{"id":"1","type":"SMS","sender":"+1234567890","contentPreview":"Hello","createdAt":"2025-01-01T00:00:00Z"}]`,
+			headers: map[string]string{
+				"X-Total-Count": "42",
+			},
+		})
+		defer server.Close()
+
+		client := newClient(server.URL)
+		msgs, total, err := client.ListInboxMessages(context.Background(), smsgateway.ListInboxOptions{})
+		if err != nil {
+			t.Errorf("Expected no error, got %v", err)
+		}
+		if len(msgs) != 1 {
+			t.Errorf("Expected 1 message, got %d", len(msgs))
+		}
+		if total != 42 {
+			t.Errorf("Expected total 42, got %d", total)
+		}
+	})
+
+	t.Run("Success with filters", func(t *testing.T) {
+		msgType := smsgateway.IncomingMessageTypeSMS
+		limit := 10
+		offset := 5
+		from := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+		to := time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)
+		deviceID := "device123"
+
+		server := newMockServer(mockServerExpectedInput{
+			method: http.MethodGet,
+			path:   "/inbox",
+			query:  "deviceId=device123&from=2025-01-01T00%3A00%3A00Z&limit=10&offset=5&to=2025-01-02T00%3A00%3A00Z&type=SMS",
+		}, mockServerOutput{
+			code: http.StatusOK,
+			body: `[]`,
+		})
+		defer server.Close()
+
+		client := newClient(server.URL)
+		msgs, total, err := client.ListInboxMessages(context.Background(), smsgateway.ListInboxOptions{
+			Type:     &msgType,
+			Limit:    &limit,
+			Offset:   &offset,
+			From:     &from,
+			To:       &to,
+			DeviceID: &deviceID,
+		})
+		if err != nil {
+			t.Errorf("Expected no error, got %v", err)
+		}
+		if len(msgs) != 0 {
+			t.Errorf("Expected 0 messages, got %d", len(msgs))
+		}
+		if total != 0 {
+			t.Errorf("Expected total 0, got %d", total)
+		}
+	})
+
+	t.Run("Error response", func(t *testing.T) {
+		server := newMockServer(mockServerExpectedInput{
+			method: http.MethodGet,
+			path:   "/inbox",
+		}, mockServerOutput{
+			code: http.StatusInternalServerError,
+			body: `{"error": "internal error"}`,
+		})
+		defer server.Close()
+
+		client := newClient(server.URL)
+		_, _, err := client.ListInboxMessages(context.Background(), smsgateway.ListInboxOptions{})
+		if err == nil {
+			t.Error("Expected error, got nil")
+		}
+	})
+
+	t.Run("Error response with body", func(t *testing.T) {
+		server := newMockServer(mockServerExpectedInput{
+			method: http.MethodGet,
+			path:   "/inbox",
+		}, mockServerOutput{
+			code: http.StatusBadRequest,
+			body: `{"message":"invalid request","code":400}`,
+		})
+		defer server.Close()
+
+		client := newClient(server.URL)
+		_, _, err := client.ListInboxMessages(context.Background(), smsgateway.ListInboxOptions{})
+		if err == nil {
+			t.Error("Expected error, got nil")
+		}
+	})
+}
+
+func TestClient_RefreshInbox(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		server := newMockServer(mockServerExpectedInput{
+			method:      http.MethodPost,
+			path:        "/inbox/refresh",
+			contentType: "application/json",
+			body:        `{"since":"2025-01-01T00:00:00Z","until":"2025-01-02T00:00:00Z","triggerWebhooks":true}`,
+		}, mockServerOutput{
+			code: http.StatusAccepted,
+		})
+		defer server.Close()
+
+		client := newClient(server.URL)
+		err := client.RefreshInbox(context.Background(), smsgateway.InboxRefreshRequest{
+			Since:           time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+			Until:           time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC),
+			TriggerWebhooks: true,
+		})
+		if err != nil {
+			t.Errorf("Expected no error, got %v", err)
+		}
+	})
+
+	t.Run("Error response", func(t *testing.T) {
+		server := newMockServer(mockServerExpectedInput{
+			method:      http.MethodPost,
+			path:        "/inbox/refresh",
+			contentType: "application/json",
+			body:        `{"since":"2025-01-01T00:00:00Z","until":"2025-01-02T00:00:00Z","triggerWebhooks":true}`,
+		}, mockServerOutput{
+			code: http.StatusInternalServerError,
+			body: `{"error": "internal error"}`,
+		})
+		defer server.Close()
+
+		client := newClient(server.URL)
+		err := client.RefreshInbox(context.Background(), smsgateway.InboxRefreshRequest{
+			Since:           time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+			Until:           time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC),
+			TriggerWebhooks: true,
+		})
+		if err == nil {
+			t.Error("Expected error, got nil")
+		}
+	})
+}
+
+func TestClient_ListMessages(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		server := newMockServer(mockServerExpectedInput{
+			method: http.MethodGet,
+			path:   "/messages",
+		}, mockServerOutput{
+			code: http.StatusOK,
+			body: `[{"id":"1","deviceId":"dev123","state":"Pending","recipients":[{"phoneNumber":"+1234567890","state":"Pending"}]}]`,
+		})
+		defer server.Close()
+
+		client := newClient(server.URL)
+		msgs, total, err := client.ListMessages(context.Background(), smsgateway.ListMessagesOptions{})
+		if err != nil {
+			t.Errorf("Expected no error, got %v", err)
+		}
+		if len(msgs) != 1 {
+			t.Errorf("Expected 1 message, got %d", len(msgs))
+		}
+		if total != 0 {
+			t.Errorf("Expected total 0, got %d", total)
+		}
+	})
+
+	t.Run("Success with X-Total-Count", func(t *testing.T) {
+		server := newMockServer(mockServerExpectedInput{
+			method: http.MethodGet,
+			path:   "/messages",
+		}, mockServerOutput{
+			code: http.StatusOK,
+			body: `[{"id":"1","deviceId":"dev123","state":"Pending","recipients":[{"phoneNumber":"+1234567890","state":"Pending"}]}]`,
+			headers: map[string]string{
+				"X-Total-Count": "99",
+			},
+		})
+		defer server.Close()
+
+		client := newClient(server.URL)
+		msgs, total, err := client.ListMessages(context.Background(), smsgateway.ListMessagesOptions{})
+		if err != nil {
+			t.Errorf("Expected no error, got %v", err)
+		}
+		if len(msgs) != 1 {
+			t.Errorf("Expected 1 message, got %d", len(msgs))
+		}
+		if total != 99 {
+			t.Errorf("Expected total 99, got %d", total)
+		}
+	})
+
+	t.Run("Success with filters", func(t *testing.T) {
+		from := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+		to := time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)
+		state := "Pending"
+		deviceID := "dev123"
+		limit := 10
+		offset := 5
+		includeContent := true
+
+		server := newMockServer(mockServerExpectedInput{
+			method: http.MethodGet,
+			path:   "/messages",
+			query:  "deviceId=dev123&from=2025-01-01T00%3A00%3A00Z&includeContent=true&limit=10&offset=5&state=Pending&to=2025-01-02T00%3A00%3A00Z",
+		}, mockServerOutput{
+			code: http.StatusOK,
+			body: `[]`,
+		})
+		defer server.Close()
+
+		client := newClient(server.URL)
+		msgs, total, err := client.ListMessages(context.Background(), smsgateway.ListMessagesOptions{
+			From:           &from,
+			To:             &to,
+			State:          &state,
+			DeviceID:       &deviceID,
+			Limit:          &limit,
+			Offset:         &offset,
+			IncludeContent: &includeContent,
+		})
+		if err != nil {
+			t.Errorf("Expected no error, got %v", err)
+		}
+		if len(msgs) != 0 {
+			t.Errorf("Expected 0 messages, got %d", len(msgs))
+		}
+		if total != 0 {
+			t.Errorf("Expected total 0, got %d", total)
+		}
+	})
+
+	t.Run("Error response", func(t *testing.T) {
+		server := newMockServer(mockServerExpectedInput{
+			method: http.MethodGet,
+			path:   "/messages",
+		}, mockServerOutput{
+			code: http.StatusInternalServerError,
+			body: `{"error": "internal error"}`,
+		})
+		defer server.Close()
+
+		client := newClient(server.URL)
+		_, _, err := client.ListMessages(context.Background(), smsgateway.ListMessagesOptions{})
+		if err == nil {
+			t.Error("Expected error, got nil")
+		}
+	})
+
+	t.Run("Error response with body", func(t *testing.T) {
+		server := newMockServer(mockServerExpectedInput{
+			method: http.MethodGet,
+			path:   "/messages",
+		}, mockServerOutput{
+			code: http.StatusBadRequest,
+			body: `{"message":"invalid request","code":400}`,
+		})
+		defer server.Close()
+
+		client := newClient(server.URL)
+		_, _, err := client.ListMessages(context.Background(), smsgateway.ListMessagesOptions{})
+		if err == nil {
+			t.Error("Expected error, got nil")
+		}
+	})
+
+	t.Run("Unauthorized", func(t *testing.T) {
+		server := newMockServer(mockServerExpectedInput{
+			method: http.MethodGet,
+			path:   "/messages",
+		}, mockServerOutput{
+			code: http.StatusUnauthorized,
+			body: `{"message":"unauthorized","code":401}`,
+		})
+		defer server.Close()
+
+		client := newClient(server.URL)
+		_, _, err := client.ListMessages(context.Background(), smsgateway.ListMessagesOptions{})
+		if err == nil {
+			t.Error("Expected error, got nil")
+		}
+	})
+
+	t.Run("Forbidden", func(t *testing.T) {
+		server := newMockServer(mockServerExpectedInput{
+			method: http.MethodGet,
+			path:   "/messages",
+		}, mockServerOutput{
+			code: http.StatusForbidden,
+			body: `{"message":"forbidden","code":403}`,
+		})
+		defer server.Close()
+
+		client := newClient(server.URL)
+		_, _, err := client.ListMessages(context.Background(), smsgateway.ListMessagesOptions{})
+		if err == nil {
+			t.Error("Expected error, got nil")
+		}
+	})
+
+	t.Run("Not Implemented", func(t *testing.T) {
+		server := newMockServer(mockServerExpectedInput{
+			method: http.MethodGet,
+			path:   "/messages",
+		}, mockServerOutput{
+			code: http.StatusNotImplemented,
+			body: `{"message":"not implemented","code":501}`,
+		})
+		defer server.Close()
+
+		client := newClient(server.URL)
+		_, _, err := client.ListMessages(context.Background(), smsgateway.ListMessagesOptions{})
+		if err == nil {
+			t.Error("Expected error, got nil")
+		}
+	})
+
+	t.Run("Corrupt JSON body", func(t *testing.T) {
+		server := newMockServer(mockServerExpectedInput{
+			method: http.MethodGet,
+			path:   "/messages",
+		}, mockServerOutput{
+			code: http.StatusOK,
+			body: `{corrupt json`,
+		})
+		defer server.Close()
+
+		client := newClient(server.URL)
+		_, _, err := client.ListMessages(context.Background(), smsgateway.ListMessagesOptions{})
+		if err == nil {
+			t.Error("Expected error, got nil")
+		}
+	})
+
+	t.Run("Non-numeric X-Total-Count", func(t *testing.T) {
+		server := newMockServer(mockServerExpectedInput{
+			method: http.MethodGet,
+			path:   "/messages",
+		}, mockServerOutput{
+			code: http.StatusOK,
+			body: `[]`,
+			headers: map[string]string{
+				"X-Total-Count": "abc",
+			},
+		})
+		defer server.Close()
+
+		client := newClient(server.URL)
+		_, _, err := client.ListMessages(context.Background(), smsgateway.ListMessagesOptions{})
+		if err == nil {
+			t.Error("Expected error for non-numeric X-Total-Count, got nil")
+		}
+	})
+
+	t.Run("Network error", func(t *testing.T) {
+		server := newMockServer(mockServerExpectedInput{
+			method: http.MethodGet,
+			path:   "/messages",
+		}, mockServerOutput{
+			code: http.StatusOK,
+			body: `[]`,
+		})
+		server.Close()
+
+		client := newClient(server.URL)
+		_, _, err := client.ListMessages(context.Background(), smsgateway.ListMessagesOptions{})
+		if err == nil {
+			t.Error("Expected error, got nil")
+		}
+	})
+}
+
+func TestClient_ListInboxMessages_Negative(t *testing.T) {
+	t.Run("Unauthorized", func(t *testing.T) {
+		server := newMockServer(mockServerExpectedInput{
+			method: http.MethodGet,
+			path:   "/inbox",
+		}, mockServerOutput{
+			code: http.StatusUnauthorized,
+			body: `{"message":"unauthorized","code":401}`,
+		})
+		defer server.Close()
+
+		client := newClient(server.URL)
+		_, _, err := client.ListInboxMessages(context.Background(), smsgateway.ListInboxOptions{})
+		if err == nil {
+			t.Error("Expected error, got nil")
+		}
+	})
+
+	t.Run("Forbidden", func(t *testing.T) {
+		server := newMockServer(mockServerExpectedInput{
+			method: http.MethodGet,
+			path:   "/inbox",
+		}, mockServerOutput{
+			code: http.StatusForbidden,
+			body: `{"message":"forbidden","code":403}`,
+		})
+		defer server.Close()
+
+		client := newClient(server.URL)
+		_, _, err := client.ListInboxMessages(context.Background(), smsgateway.ListInboxOptions{})
+		if err == nil {
+			t.Error("Expected error, got nil")
+		}
+	})
+
+	t.Run("Not Implemented", func(t *testing.T) {
+		server := newMockServer(mockServerExpectedInput{
+			method: http.MethodGet,
+			path:   "/inbox",
+		}, mockServerOutput{
+			code: http.StatusNotImplemented,
+			body: `{"message":"not implemented","code":501}`,
+		})
+		defer server.Close()
+
+		client := newClient(server.URL)
+		_, _, err := client.ListInboxMessages(context.Background(), smsgateway.ListInboxOptions{})
+		if err == nil {
+			t.Error("Expected error, got nil")
+		}
+	})
+
+	t.Run("Corrupt JSON body", func(t *testing.T) {
+		server := newMockServer(mockServerExpectedInput{
+			method: http.MethodGet,
+			path:   "/inbox",
+		}, mockServerOutput{
+			code: http.StatusOK,
+			body: `{corrupt json`,
+		})
+		defer server.Close()
+
+		client := newClient(server.URL)
+		_, _, err := client.ListInboxMessages(context.Background(), smsgateway.ListInboxOptions{})
+		if err == nil {
+			t.Error("Expected error, got nil")
+		}
+	})
+
+	t.Run("Non-numeric X-Total-Count", func(t *testing.T) {
+		server := newMockServer(mockServerExpectedInput{
+			method: http.MethodGet,
+			path:   "/inbox",
+		}, mockServerOutput{
+			code: http.StatusOK,
+			body: `[]`,
+			headers: map[string]string{
+				"X-Total-Count": "abc",
+			},
+		})
+		defer server.Close()
+
+		client := newClient(server.URL)
+		_, _, err := client.ListInboxMessages(context.Background(), smsgateway.ListInboxOptions{})
+		if err == nil {
+			t.Error("Expected error for non-numeric X-Total-Count, got nil")
+		}
+	})
+
+	t.Run("Network error", func(t *testing.T) {
+		server := newMockServer(mockServerExpectedInput{
+			method: http.MethodGet,
+			path:   "/inbox",
+		}, mockServerOutput{
+			code: http.StatusOK,
+			body: `[]`,
+		})
+		server.Close()
+
+		client := newClient(server.URL)
+		_, _, err := client.ListInboxMessages(context.Background(), smsgateway.ListInboxOptions{})
+		if err == nil {
+			t.Error("Expected error, got nil")
+		}
+	})
+}
+
+func TestClient_RefreshInbox_Negative(t *testing.T) {
+	t.Run("Bad Request", func(t *testing.T) {
+		server := newMockServer(mockServerExpectedInput{
+			method:      http.MethodPost,
+			path:        "/inbox/refresh",
+			contentType: "application/json",
+			body:        `{"since":"2025-01-01T00:00:00Z","until":"2025-01-02T00:00:00Z","triggerWebhooks":true}`,
+		}, mockServerOutput{
+			code: http.StatusBadRequest,
+			body: `{"message":"invalid request","code":400}`,
+		})
+		defer server.Close()
+
+		client := newClient(server.URL)
+		err := client.RefreshInbox(context.Background(), smsgateway.InboxRefreshRequest{
+			Since:           time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+			Until:           time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC),
+			TriggerWebhooks: true,
+		})
+		if err == nil {
+			t.Error("Expected error, got nil")
+		}
+	})
+
+	t.Run("Unauthorized", func(t *testing.T) {
+		server := newMockServer(mockServerExpectedInput{
+			method:      http.MethodPost,
+			path:        "/inbox/refresh",
+			contentType: "application/json",
+			body:        `{"since":"2025-01-01T00:00:00Z","until":"2025-01-02T00:00:00Z","triggerWebhooks":true}`,
+		}, mockServerOutput{
+			code: http.StatusUnauthorized,
+			body: `{"message":"unauthorized","code":401}`,
+		})
+		defer server.Close()
+
+		client := newClient(server.URL)
+		err := client.RefreshInbox(context.Background(), smsgateway.InboxRefreshRequest{
+			Since:           time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+			Until:           time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC),
+			TriggerWebhooks: true,
+		})
+		if err == nil {
+			t.Error("Expected error, got nil")
+		}
+	})
+
+	t.Run("Forbidden", func(t *testing.T) {
+		server := newMockServer(mockServerExpectedInput{
+			method:      http.MethodPost,
+			path:        "/inbox/refresh",
+			contentType: "application/json",
+			body:        `{"since":"2025-01-01T00:00:00Z","until":"2025-01-02T00:00:00Z","triggerWebhooks":true}`,
+		}, mockServerOutput{
+			code: http.StatusForbidden,
+			body: `{"message":"forbidden","code":403}`,
+		})
+		defer server.Close()
+
+		client := newClient(server.URL)
+		err := client.RefreshInbox(context.Background(), smsgateway.InboxRefreshRequest{
+			Since:           time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+			Until:           time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC),
+			TriggerWebhooks: true,
+		})
+		if err == nil {
+			t.Error("Expected error, got nil")
+		}
+	})
 }

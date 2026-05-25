@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/android-sms-gateway/client-go/rest"
@@ -108,6 +109,8 @@ func (c *Client) CheckHealth(ctx context.Context) (HealthResponse, error) {
 }
 
 // ExportInbox exports messages via webhooks.
+//
+// Deprecated: use RefreshInbox instead.
 func (c *Client) ExportInbox(ctx context.Context, req MessagesExportRequest) error {
 	path := "/inbox/export"
 
@@ -116,6 +119,61 @@ func (c *Client) ExportInbox(ctx context.Context, req MessagesExportRequest) err
 	}
 
 	return nil
+}
+
+// ListInboxMessages retrieves incoming messages with filtering and pagination.
+// Returns the messages, total count (from X-Total-Count header), and error.
+func (c *Client) ListInboxMessages(ctx context.Context, opts ListInboxOptions) ([]IncomingMessage, int, error) {
+	path := "/inbox?" + opts.ToURLValues().Encode()
+	var msgs []IncomingMessage
+
+	hdr, err := c.DoWithResponseHeaders(ctx, http.MethodGet, path, c.headers, nil, &msgs)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to list inbox messages: %w", err)
+	}
+
+	total := 0
+	if v := hdr.Get("X-Total-Count"); v != "" {
+		total, err = strconv.Atoi(v)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to parse X-Total-Count header: %w", err)
+		}
+	}
+
+	return msgs, total, nil
+}
+
+// RefreshInbox requests an inbox messages refresh.
+func (c *Client) RefreshInbox(ctx context.Context, req InboxRefreshRequest) error {
+	path := "/inbox/refresh"
+
+	if err := c.Do(ctx, http.MethodPost, path, c.headers, &req, nil); err != nil {
+		return fmt.Errorf("failed to refresh inbox: %w", err)
+	}
+
+	return nil
+}
+
+// ListMessages retrieves messages with filtering and pagination.
+// Returns the messages, total count (from X-Total-Count header), and error.
+func (c *Client) ListMessages(ctx context.Context, opts ListMessagesOptions) ([]MessageState, int, error) {
+	path := "/messages?" + opts.ToURLValues().Encode()
+	var msgs []MessageState
+
+	hdr, err := c.DoWithResponseHeaders(ctx, http.MethodGet, path, c.headers, nil, &msgs)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to list messages: %w", err)
+	}
+
+	total := 0
+	if v := hdr.Get("X-Total-Count"); v != "" {
+		total, err = strconv.Atoi(v)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to parse X-Total-Count header: %w", err)
+		}
+	}
+
+	return msgs, total, nil
 }
 
 // GetLogs retrieves log entries.
@@ -223,7 +281,7 @@ func (c *Client) GenerateToken(ctx context.Context, req TokenRequest) (TokenResp
 // RefreshToken exchanges a refresh token for a new token pair.
 // Returns the refreshed token details or an error if the request fails.
 func (c *Client) RefreshToken(ctx context.Context, refreshToken string) (TokenResponse, error) {
-	path := "/auth/refresh"
+	path := "/auth/token/refresh"
 	resp := new(TokenResponse)
 	headers := map[string]string{
 		"Authorization": "Bearer " + refreshToken,
