@@ -27,18 +27,38 @@ func NewClient(config Config) *Client {
 }
 
 func (c *Client) Do(ctx context.Context, method, path string, headers map[string]string, payload, response any) error {
+	_, err := c.do(ctx, method, path, headers, payload, response)
+	return err
+}
+
+// DoWithResponseHeaders is like Do but also returns the response headers.
+func (c *Client) DoWithResponseHeaders(
+	ctx context.Context,
+	method, path string,
+	headers map[string]string,
+	payload, response any,
+) (http.Header, error) {
+	return c.do(ctx, method, path, headers, payload, response)
+}
+
+func (c *Client) do(
+	ctx context.Context,
+	method, path string,
+	headers map[string]string,
+	payload, response any,
+) (http.Header, error) {
 	var reqBody io.Reader
 	if payload != nil {
 		jsonBytes, err := json.Marshal(payload)
 		if err != nil {
-			return fmt.Errorf("failed to marshal payload: %w", err)
+			return nil, fmt.Errorf("failed to marshal payload: %w", err)
 		}
 		reqBody = strings.NewReader(string(jsonBytes))
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, c.config.BaseURL+path, reqBody)
 	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
+		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	if reqBody != nil {
@@ -50,7 +70,7 @@ func (c *Client) Do(ctx context.Context, method, path string, headers map[string
 
 	resp, err := c.config.Client.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed to make request: %w", err)
+		return nil, fmt.Errorf("failed to make request: %w", err)
 	}
 	defer func() {
 		_, _ = io.Copy(io.Discard, resp.Body)
@@ -60,18 +80,20 @@ func (c *Client) Do(ctx context.Context, method, path string, headers map[string
 	if resp.StatusCode >= http.StatusBadRequest {
 		body, _ := io.ReadAll(resp.Body)
 
-		return c.formatError(resp.StatusCode, body)
+		return resp.Header, c.formatError(resp.StatusCode, body)
 	}
 
 	if resp.StatusCode == http.StatusNoContent {
-		return nil
+		return resp.Header, nil
 	}
 
-	if decErr := json.NewDecoder(resp.Body).Decode(&response); decErr != nil {
-		return fmt.Errorf("failed to decode response: %w", decErr)
+	if response != nil {
+		if decErr := json.NewDecoder(resp.Body).Decode(response); decErr != nil {
+			return nil, fmt.Errorf("failed to decode response: %w", decErr)
+		}
 	}
 
-	return nil
+	return resp.Header, nil
 }
 
 func (c *Client) formatError(statusCode int, body []byte) error {

@@ -198,9 +198,10 @@ func TestClient_Do(t *testing.T) {
 				},
 			},
 			args: args{
-				ctx:    context.Background(),
-				method: http.MethodGet,
-				path:   "/corrupt",
+				ctx:      context.Background(),
+				method:   http.MethodGet,
+				path:     "/corrupt",
+				response: &struct{}{},
 			},
 			wantErr:     true,
 			wantErrType: nil, // No specific error type expected
