@@ -124,3 +124,10 @@ type MmsDownloadedPayload struct {
 
 // SystemPingPayload represents the payload of `system:ping` event.
 type SystemPingPayload struct{}
+
+// AppStartedPayload represents the payload of `app:started` event.
+//
+// SimCards is the list of SIM cards available in the device.
+type AppStartedPayload struct {
+	SimCards []SimCard `json:"simCards,omitempty"`
+}
