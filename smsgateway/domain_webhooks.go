@@ -16,6 +16,7 @@ const (
 	WebhookEventSystemPing      WebhookEvent = "system:ping"       // Triggered when the device pings the server.
 	WebhookEventMmsReceived     WebhookEvent = "mms:received"      // Triggered when an MMS is received.
 	WebhookEventMmsDownloaded   WebhookEvent = "mms:downloaded"    // Triggered when an MMS is downloaded.
+	WebhookEventAppStarted      WebhookEvent = "app:started"       // Triggered when the application is started.
 )
 
 //nolint:gochecknoglobals // single source of truth for all webhook event types
@@ -28,6 +29,7 @@ var webhookEventTypes = []WebhookEvent{
 	WebhookEventSystemPing,
 	WebhookEventMmsReceived,
 	WebhookEventMmsDownloaded,
+	WebhookEventAppStarted,
 }
 
 //nolint:gochecknoglobals // lookup table derived from webhookEventTypes
