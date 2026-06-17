@@ -41,7 +41,8 @@ type MobileUserCodeResponse struct {
 type MobileMessage struct {
 	Message // Message information
 
-	CreatedAt time.Time `json:"createdAt" example:"2020-01-01T00:00:00Z"` // Message creation time
+	State     ProcessingState `json:"state"     example:"Pending"`              // State (Pending or Cancelling)
+	CreatedAt time.Time       `json:"createdAt" example:"2020-01-01T00:00:00Z"` // Message creation time
 }
 
 // MobileGetMessagesResponse represents a collection of messages for mobile clients.
