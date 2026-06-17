@@ -49,6 +49,16 @@ type SmsDeliveredPayload struct {
 	DeliveredAt time.Time `json:"deliveredAt" example:"2020-01-01T00:00:00Z"` // The timestamp when the SMS message was delivered.
 }
 
+// SmsCancelledPayload represents the payload of `sms:cancelled` event.
+//
+// SmsEventPayload is the base payload for message-related events.
+// CancelledAt is the timestamp when the SMS message was cancelled.
+type SmsCancelledPayload struct {
+	SmsEventPayload
+
+	CancelledAt time.Time `json:"cancelledAt" example:"2020-01-01T00:00:00Z"` // The timestamp when the SMS message was cancelled.
+}
+
 // SmsFailedPayload represents the payload of `sms:failed` event.
 //
 // SmsEventPayload is the base payload for message-related events.

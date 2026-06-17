@@ -1556,6 +1556,133 @@ func TestClient_ListInboxMessages_Negative(t *testing.T) {
 	})
 }
 
+func TestClient_CancelMessage(t *testing.T) {
+	tests := []struct {
+		name      string
+		messageID string
+		code      int
+		wantErr   bool
+	}{
+		{
+			name:      "Success",
+			messageID: "msg_123",
+			code:      http.StatusNoContent,
+			wantErr:   false,
+		},
+		{
+			name:      "Not Found",
+			messageID: "nonexistent",
+			code:      http.StatusNotFound,
+			wantErr:   true,
+		},
+		{
+			name:      "Bad Request",
+			messageID: "",
+			code:      http.StatusBadRequest,
+			wantErr:   true,
+		},
+		{
+			name:      "Unauthorized",
+			messageID: "msg_123",
+			code:      http.StatusUnauthorized,
+			wantErr:   true,
+		},
+		{
+			name:      "Forbidden",
+			messageID: "msg_123",
+			code:      http.StatusForbidden,
+			wantErr:   true,
+		},
+		{
+			name:      "Conflict",
+			messageID: "msg_123",
+			code:      http.StatusConflict,
+			wantErr:   true,
+		},
+		{
+			name:      "Server Error",
+			messageID: "msg_123",
+			code:      http.StatusInternalServerError,
+			wantErr:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := newMockServer(mockServerExpectedInput{
+				method: http.MethodDelete,
+				path:   "/messages/" + tt.messageID,
+			}, mockServerOutput{
+				code: tt.code,
+			})
+			defer server.Close()
+
+			client := newClient(server.URL)
+			err := client.CancelMessage(context.Background(), tt.messageID)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("CancelMessage() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+
+	t.Run("URL Encoding", func(t *testing.T) {
+		messageID := "msg/123"
+		encodedPath := "/messages/" + url.PathEscape(messageID)
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodDelete {
+				w.WriteHeader(http.StatusMethodNotAllowed)
+				return
+			}
+			if r.URL.RawPath != encodedPath {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
+		}))
+		defer server.Close()
+
+		client := newClient(server.URL)
+		err := client.CancelMessage(context.Background(), messageID)
+		if err != nil {
+			t.Errorf("Expected no error, got %v", err)
+		}
+	})
+
+	t.Run("Network error", func(t *testing.T) {
+		server := newMockServer(mockServerExpectedInput{
+			method: http.MethodDelete,
+			path:   "/messages/msg_123",
+		}, mockServerOutput{
+			code: http.StatusNoContent,
+		})
+		server.Close()
+
+		client := newClient(server.URL)
+		err := client.CancelMessage(context.Background(), "msg_123")
+		if err == nil {
+			t.Error("Expected error, got nil")
+		}
+	})
+}
+
+func TestJWTClient_CancelMessage(t *testing.T) {
+	server := newMockServer(mockServerExpectedInput{
+		method:        http.MethodDelete,
+		path:          "/messages/msg_123",
+		authorization: "Bearer " + password,
+	}, mockServerOutput{
+		code: http.StatusNoContent,
+	})
+	defer server.Close()
+
+	client := newJWTClient(server.URL)
+	err := client.CancelMessage(context.Background(), "msg_123")
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+}
+
 func TestClient_RefreshInbox_Negative(t *testing.T) {
 	t.Run("Bad Request", func(t *testing.T) {
 		server := newMockServer(mockServerExpectedInput{

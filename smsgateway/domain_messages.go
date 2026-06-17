@@ -14,11 +14,13 @@ type (
 )
 
 const (
-	ProcessingStatePending   ProcessingState = "Pending"   // Pending
-	ProcessingStateProcessed ProcessingState = "Processed" // Processed (received by device)
-	ProcessingStateSent      ProcessingState = "Sent"      // Sent
-	ProcessingStateDelivered ProcessingState = "Delivered" // Delivered
-	ProcessingStateFailed    ProcessingState = "Failed"    // Failed
+	ProcessingStatePending    ProcessingState = "Pending"    // Pending
+	ProcessingStateCancelling ProcessingState = "Cancelling" // Cancelling (cancellation requested)
+	ProcessingStateCancelled  ProcessingState = "Cancelled"  // Cancelled
+	ProcessingStateProcessed  ProcessingState = "Processed"  // Processed (received by device)
+	ProcessingStateSent       ProcessingState = "Sent"       // Sent
+	ProcessingStateDelivered  ProcessingState = "Delivered"  // Delivered
+	ProcessingStateFailed     ProcessingState = "Failed"     // Failed
 
 	PriorityMinimum         MessagePriority = -128
 	PriorityDefault         MessagePriority = 0
@@ -28,11 +30,13 @@ const (
 
 //nolint:gochecknoglobals // lookup table
 var allProcessStates = map[ProcessingState]struct{}{
-	ProcessingStatePending:   {},
-	ProcessingStateProcessed: {},
-	ProcessingStateSent:      {},
-	ProcessingStateDelivered: {},
-	ProcessingStateFailed:    {},
+	ProcessingStatePending:    {},
+	ProcessingStateCancelling: {},
+	ProcessingStateCancelled:  {},
+	ProcessingStateProcessed:  {},
+	ProcessingStateSent:       {},
+	ProcessingStateDelivered:  {},
+	ProcessingStateFailed:     {},
 }
 
 // TextMessage represents an SMS message with a text body.

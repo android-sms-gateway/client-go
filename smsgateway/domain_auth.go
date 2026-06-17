@@ -11,6 +11,7 @@ const (
 
 	ScopeLogsRead JWTScope = "logs:read"
 
+	ScopeMessagesCancel JWTScope = "messages:cancel"
 	ScopeMessagesSend   JWTScope = "messages:send"
 	ScopeMessagesRead   JWTScope = "messages:read"
 	ScopeMessagesList   JWTScope = "messages:list"
