@@ -61,6 +61,17 @@ func (c *Client) Send(ctx context.Context, message Message, options ...SendOptio
 	return *resp, nil
 }
 
+// CancelMessage cancels a pending message by ID.
+func (c *Client) CancelMessage(ctx context.Context, messageID string) error {
+	path := fmt.Sprintf("/messages/%s", url.PathEscape(messageID))
+
+	if err := c.Do(ctx, http.MethodDelete, path, c.headers, nil, nil); err != nil {
+		return fmt.Errorf("failed to cancel message: %w", err)
+	}
+
+	return nil
+}
+
 // GetState returns message state by ID.
 func (c *Client) GetState(ctx context.Context, messageID string) (MessageState, error) {
 	path := fmt.Sprintf("/messages/%s", url.PathEscape(messageID))

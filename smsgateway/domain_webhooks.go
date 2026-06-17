@@ -13,6 +13,7 @@ const (
 	WebhookEventSmsSent         WebhookEvent = "sms:sent"          // Triggered when an SMS is sent.
 	WebhookEventSmsDelivered    WebhookEvent = "sms:delivered"     // Triggered when an SMS is delivered.
 	WebhookEventSmsFailed       WebhookEvent = "sms:failed"        // Triggered when an SMS processing fails.
+	WebhookEventSmsCancelled    WebhookEvent = "sms:cancelled"     // Triggered when an SMS is cancelled.
 	WebhookEventSystemPing      WebhookEvent = "system:ping"       // Triggered when the device pings the server.
 	WebhookEventMmsReceived     WebhookEvent = "mms:received"      // Triggered when an MMS is received.
 	WebhookEventMmsDownloaded   WebhookEvent = "mms:downloaded"    // Triggered when an MMS is downloaded.
@@ -26,6 +27,7 @@ var webhookEventTypes = []WebhookEvent{
 	WebhookEventSmsSent,
 	WebhookEventSmsDelivered,
 	WebhookEventSmsFailed,
+	WebhookEventSmsCancelled,
 	WebhookEventSystemPing,
 	WebhookEventMmsReceived,
 	WebhookEventMmsDownloaded,
