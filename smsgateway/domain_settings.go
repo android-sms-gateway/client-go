@@ -1,7 +1,12 @@
 //nolint:lll // validator tags
 package smsgateway
 
-import "fmt"
+import (
+	"fmt"
+	"regexp"
+)
+
+var timeFormatRegexp = regexp.MustCompile(`^\d{2}:\d{2}$`)
 
 // LimitPeriod defines the period for message sending limits.
 type LimitPeriod string
@@ -101,6 +106,15 @@ type SettingsMessages struct {
 	// MessagesProcessingOrder defines the order in which messages are processed.
 	// Valid values are "LIFO" or "FIFO".
 	ProcessingOrder *MessagesProcessingOrder `json:"processing_order,omitempty" validate:"omitempty,oneof=LIFO FIFO"`
+
+	// WorkHoursEnabled enables restricting message delivery to a configurable time window.
+	WorkHoursEnabled *bool `json:"work_hours_enabled,omitempty"`
+
+	// WorkHoursStart is the start of the working hours window in HH:mm format (24-hour).
+	WorkHoursStart *string `json:"work_hours_start,omitempty"`
+
+	// WorkHoursEnd is the end of the working hours window in HH:mm format (24-hour).
+	WorkHoursEnd *string `json:"work_hours_end,omitempty"`
 }
 
 func (s SettingsMessages) Validate() error {
@@ -108,7 +122,59 @@ func (s SettingsMessages) Validate() error {
 		return fmt.Errorf("%w: sendIntervalMax must be greater than or equal to sendIntervalMin", ErrValidationFailed)
 	}
 
+	if err := s.validateWorkHours(); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func (s SettingsMessages) validateWorkHours() error {
+	if s.WorkHoursEnabled == nil || !*s.WorkHoursEnabled {
+		return nil
+	}
+
+	if s.WorkHoursStart == nil {
+		return fmt.Errorf("%w: workHoursStart is required when work hours are enabled", ErrValidationFailed)
+	}
+	if s.WorkHoursEnd == nil {
+		return fmt.Errorf("%w: workHoursEnd is required when work hours are enabled", ErrValidationFailed)
+	}
+	if !timeFormatRegexp.MatchString(*s.WorkHoursStart) {
+		return fmt.Errorf(
+			"%w: workHoursStart must be in HH:mm format, got %q",
+			ErrValidationFailed,
+			*s.WorkHoursStart,
+		)
+	}
+	if !timeFormatRegexp.MatchString(*s.WorkHoursEnd) {
+		return fmt.Errorf("%w: workHoursEnd must be in HH:mm format, got %q", ErrValidationFailed, *s.WorkHoursEnd)
+	}
+	h1, m1 := parseTime(*s.WorkHoursStart)
+	h2, m2 := parseTime(*s.WorkHoursEnd)
+	if h1 < 0 || h1 > 23 || m1 < 0 || m1 > 59 {
+		return fmt.Errorf(
+			"%w: workHoursStart %q contains invalid time values",
+			ErrValidationFailed,
+			*s.WorkHoursStart,
+		)
+	}
+	if h2 < 0 || h2 > 23 || m2 < 0 || m2 > 59 {
+		return fmt.Errorf("%w: workHoursEnd %q contains invalid time values", ErrValidationFailed, *s.WorkHoursEnd)
+	}
+
+	return nil
+}
+
+func parseTime(value string) (int, int) {
+	const parts = 2
+
+	var h, m int
+	n, _ := fmt.Sscanf(value, "%d:%d", &h, &m)
+	if n != parts {
+		return -1, -1
+	}
+	return h, m
 }
 
 // SettingsPing contains settings related to ping functionality.
