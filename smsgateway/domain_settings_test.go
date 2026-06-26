@@ -20,6 +20,31 @@ func TestDeviceSettings_Validate(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "receiver enabled",
+			settings: smsgateway.DeviceSettings{
+				Receiver: &smsgateway.SettingsReceiver{
+					ContentProviderEnabled: ptr(true),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "receiver disabled",
+			settings: smsgateway.DeviceSettings{
+				Receiver: &smsgateway.SettingsReceiver{
+					ContentProviderEnabled: ptr(false),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "receiver nil",
+			settings: smsgateway.DeviceSettings{
+				Receiver: nil,
+			},
+			wantErr: false,
+		},
+		{
 			name: "valid messages",
 			settings: smsgateway.DeviceSettings{
 				Messages: &smsgateway.SettingsMessages{
@@ -91,6 +116,6 @@ func TestSettingsMessages_Validate(t *testing.T) {
 }
 
 // Helper function to create a pointer to an int.
-func ptr(i int) *int {
+func ptr[T any](i T) *T {
 	return &i
 }
