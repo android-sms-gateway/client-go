@@ -57,6 +57,9 @@ type DeviceSettings struct {
 
 	// Gateway contains settings related to the gateway.
 	Gateway *SettingsGateway `json:"gateway,omitempty"`
+
+	// Receiver contains settings related to SMS message reception.
+	Receiver *SettingsReceiver `json:"receiver,omitempty"`
 }
 
 func (s DeviceSettings) Validate() error {
@@ -148,4 +151,11 @@ type SettingsGateway struct {
 
 	// NotificationChannel is the way device receives notifications.
 	NotificationChannel *string `json:"notification_channel,omitempty" validate:"omitempty,oneof=AUTO SSE_ONLY"`
+}
+
+// SettingsReceiver contains settings related to SMS message reception.
+type SettingsReceiver struct {
+	// ContentProviderEnabled enables monitoring the SMS content provider as a fallback for
+	// carriers that intercept the SMS_RECEIVED broadcast.
+	ContentProviderEnabled *bool `json:"content_provider_enabled,omitempty"`
 }
