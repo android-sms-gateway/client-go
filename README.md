@@ -30,49 +30,66 @@
   </p>
 </div>
 
-<!-- TABLE OF CONTENTS -->
+## Table of Contents
+
+- [Table of Contents](#table-of-contents)
 - [About The Project](#about-the-project)
-- [Built With](#built-with)
+- [Features](#features)
 - [Getting Started](#getting-started)
 	- [Prerequisites](#prerequisites)
 	- [Installation](#installation)
 - [Usage](#usage)
-	- [SMSGate client (`smsgateway`)](#smsgate-client-smsgateway)
-	- [Certificate Authority client (`ca`)](#certificate-authority-client-ca)
+	- [Sending a text message](#sending-a-text-message)
+	- [Listing incoming messages](#listing-incoming-messages)
+	- [Certificate Authority client](#certificate-authority-client)
+	- [Error handling](#error-handling)
+- [Configuration](#configuration)
+	- [`smsgateway.Config`](#smsgatewayconfig)
+	- [`ca` package](#ca-package)
+	- [Custom base URLs](#custom-base-urls)
 - [API Coverage](#api-coverage)
 	- [`smsgateway.Client`](#smsgatewayclient)
 	- [`ca.Client`](#caclient)
 - [Contributing](#contributing)
 - [License](#license)
+- [Contact](#contact)
 
-
-<!-- ABOUT THE PROJECT -->
 ## About The Project
 
 `client-go` provides typed clients for the SMSGate ecosystem:
 
-- `smsgateway` package for 3rd-party API operations (messages, devices, health, logs, settings, webhooks, and token lifecycle).
-- `ca` package for Certificate Authority workflows (submit CSR and check CSR status).
-- Shared low-level HTTP handling in the `rest` package.
+- `smsgateway` - client for the SMSGate 3rd-party API (messages, inbox, devices, health, logs, settings, webhooks, and token lifecycle).
+- `ca` - client for the SMSGate Certificate Authority service (submit CSRs and poll their status).
+- `rest` - shared low-level HTTP handling used by both clients.
 
-The library supports both Basic authentication (`user` + `password`) and Bearer token authentication for the SMSGate client.
+The library supports Basic authentication (`user` + `password`) and Bearer token authentication. A token, when set, takes priority over Basic credentials.
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-## Built With
-
-- [Go](https://go.dev/) 1.22+
-- Standard `net/http` client with configurable transport
+The library is built on the Go standard library only and has zero runtime dependencies.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-<!-- GETTING STARTED -->
+## Features
+
+- Send text and data SMS messages, cancel pending messages, and track per-message and per-recipient state.
+- List messages with filtering, pagination, content inclusion, and sorting.
+- Read incoming messages from the device inbox and trigger inbox refreshes.
+- List and delete registered devices.
+- Check API health and retrieve device log entries.
+- Read, partially update, and fully replace device settings.
+- Register, list, and delete webhooks, with typed event constants and webhook payload types.
+- Generate, refresh, and revoke API tokens with scopes and TTL.
+- Submit Certificate Signing Requests and poll CSR status (`webhook` and `private_server` types).
+- Inject a custom `http.Client` and override the base URL for testing or private deployments.
+- Classify API errors with `errors.Is` and the sentinel errors from the `rest` package.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
 ## Getting Started
 
 ### Prerequisites
 
-- Go 1.22 or newer
-- SMSGate account/device credentials and/or API token
+- Go 1.22 or newer (see [`go.mod`](go.mod)).
+- An SMSGate account with device credentials (username/password) or an API token.
 
 ### Installation
 
@@ -82,10 +99,9 @@ go get github.com/android-sms-gateway/client-go
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-<!-- USAGE EXAMPLES -->
 ## Usage
 
-### SMSGate client (`smsgateway`)
+### Sending a text message
 
 ```go
 package main
@@ -121,7 +137,25 @@ func main() {
 }
 ```
 
-### Certificate Authority client (`ca`)
+`Send` accepts optional `SendOption` values, for example `smsgateway.WithSkipPhoneValidation(true)` and `smsgateway.WithDeviceActiveWithin(24)`.
+
+### Listing incoming messages
+
+```go
+limit := 50
+
+inbox, total, err := client.ListInboxMessages(ctx, smsgateway.ListInboxOptions{
+	Limit: &limit,
+})
+if err != nil {
+	log.Fatal(err)
+}
+log.Printf("%d messages of %d total", len(inbox), total)
+```
+
+`ListMessages` follows the same pattern for outgoing messages and returns the total count from the `X-Total-Count` response header.
+
+### Certificate Authority client
 
 ```go
 package main
@@ -146,49 +180,140 @@ func main() {
 	}
 
 	log.Printf("request id: %s, status: %s", resp.RequestID, resp.Status)
+
+	status, err := client.GetCSRStatus(ctx, resp.RequestID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("CSR status: %s", status.Status.Description())
 }
+```
+
+### Error handling
+
+API failures are wrapped in sentinel errors. Use `errors.Is` with the predicates from the `rest` package to react to failure classes:
+
+```go
+import (
+	"errors"
+
+	"github.com/android-sms-gateway/client-go/rest"
+)
+
+_, err := client.Send(ctx, msg)
+switch {
+case errors.Is(err, rest.ErrBadRequest):
+	// 400: message payload rejected
+case errors.Is(err, rest.ErrConflict):
+	// 409: conflicts with current state
+case errors.Is(err, rest.ErrServer):
+	// 5xx: service unavailable
+default:
+	// other client or transport errors
+}
+```
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+## Configuration
+
+The library reads no environment variables; credentials and options are set on the config structs in code.
+
+### `smsgateway.Config`
+
+| Field      | Type           | Default                                | Description                                  |
+| ---------- | -------------- | -------------------------------------- | -------------------------------------------- |
+| `Client`   | `*http.Client` | `http.DefaultClient`                   | HTTP client used for requests                |
+| `BaseURL`  | `string`       | `https://api.sms-gate.app/3rdparty/v1` | API base URL (constant `BaseURL`)            |
+| `User`     | `string`       | empty                                  | Basic auth username                          |
+| `Password` | `string`       | empty                                  | Basic auth password                          |
+| `Token`    | `string`       | empty                                  | Bearer token, takes priority over Basic auth |
+
+Chained helpers are available for the same fields: `Config.WithClient`, `Config.WithBaseURL`, `Config.WithBasicAuth(user, password)`, and `Config.WithJWTAuth(token)`.
+
+### `ca` package
+
+The CA client is configured with functional options:
+
+| Option        | Description                                                          |
+| ------------- | -------------------------------------------------------------------- |
+| `WithClient`  | Sets the HTTP client (defaults to `http.DefaultClient`)              |
+| `WithBaseURL` | Sets the API base URL (defaults to `https://ca.sms-gate.app/api/v1`) |
+
+### Custom base URLs
+
+Override `BaseURL` (or use `WithBaseURL`) to point the clients at a private deployment or a mock server:
+
+```go
+client := smsgateway.NewClient(smsgateway.Config{
+	Token:   os.Getenv("ASG_TOKEN"),
+	BaseURL: "https://example.com/3rdparty/v1",
+})
 ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## API Coverage
 
+Endpoint semantics and payload details: <https://api.sms-gate.app/>
+
 ### `smsgateway.Client`
 
-- Messages: `Send`, `GetState`
-- Devices: `ListDevices`, `DeleteDevice`
-- Health: `CheckHealth`
-- Inbox export: `ExportInbox`
-- Logs: `GetLogs`
-- Settings: `GetSettings`, `UpdateSettings`, `ReplaceSettings`
-- Webhooks: `ListWebhooks`, `RegisterWebhook`, `DeleteWebhook`
-- Token management: `GenerateToken`, `RefreshToken`, `RevokeToken`
+| Area     | Methods                                                                                  |
+| -------- | ---------------------------------------------------------------------------------------- |
+| Messages | `Send`, `CancelMessage`, `GetState`, `ListMessages`                                      |
+| Inbox    | `ListInboxMessages`, `RefreshInbox` (`ExportInbox` is deprecated)                        |
+| Devices  | `ListDevices`, `DeleteDevice`                                                            |
+| Health   | `CheckHealth`                                                                            |
+| Logs     | `GetLogs`                                                                                |
+| Settings | `GetSettings`, `UpdateSettings`, `ReplaceSettings`                                       |
+| Webhooks | `ListWebhooks`, `RegisterWebhook`, `DeleteWebhook`, plus event constants in `smsgateway` |
+| Tokens   | `GenerateToken`, `RefreshToken`, `RevokeToken`                                           |
 
-For endpoint semantics and payload details, see https://api.sms-gate.app/
+Typed webhook payloads (for example `PushNotification`, `MmsReceivedPayload`, `SmsBatchReceivedPayload`) live in the `smsgateway` package. The `smsgateway/webhooks` subpackage exists only as a deprecated compatibility alias.
 
 ### `ca.Client`
 
-- CSR workflows: `PostCSR`, `GetCSRStatus`
+| Area | Methods                   |
+| ---- | ------------------------- |
+| CSR  | `PostCSR`, `GetCSRStatus` |
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-<!-- CONTRIBUTING -->
 ## Contributing
 
 Contributions are welcome. Please open an issue to discuss major changes before submitting a pull request.
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/my-change`)
-3. Commit your changes (`git commit -m 'Describe change'`)
-4. Push to your branch
-5. Open a Pull Request
+1. Fork the repository.
+2. Create your feature branch (`git checkout -b feature/my-change`).
+3. Commit your changes (`git commit -m 'Describe change'`).
+4. Push to your branch and open a pull request against `master`.
+
+Pull requests are checked by CI (see [`.github/workflows/go.yml`](.github/workflows/go.yml)): `golangci-lint` and `go test -race` with coverage, reported to Codecov.
+
+Run the same checks locally:
+
+```bash
+make lint
+make test
+make coverage
+make benchmark
+```
+
+`make help` lists all available targets.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-<!-- LICENSE -->
 ## License
 
-Distributed under the Apache-2.0 License. See [`LICENSE`](LICENSE) for details.
+Distributed under the Apache License 2.0. See [`LICENSE`](LICENSE) for more information.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+## Contact
+
+- Repository: <https://github.com/android-sms-gateway/client-go>
+- Issues: <https://github.com/android-sms-gateway/client-go/issues>
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

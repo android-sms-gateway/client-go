@@ -8,16 +8,20 @@ import (
 type WebhookEvent = string
 
 const (
-	WebhookEventSmsReceived     WebhookEvent = "sms:received"      // Triggered when an SMS is received.
-	WebhookEventSmsDataReceived WebhookEvent = "sms:data-received" // Triggered when a data SMS is received.
-	WebhookEventSmsSent         WebhookEvent = "sms:sent"          // Triggered when an SMS is sent.
-	WebhookEventSmsDelivered    WebhookEvent = "sms:delivered"     // Triggered when an SMS is delivered.
-	WebhookEventSmsFailed       WebhookEvent = "sms:failed"        // Triggered when an SMS processing fails.
-	WebhookEventSmsCancelled    WebhookEvent = "sms:cancelled"     // Triggered when an SMS is cancelled.
-	WebhookEventSystemPing      WebhookEvent = "system:ping"       // Triggered when the device pings the server.
-	WebhookEventMmsReceived     WebhookEvent = "mms:received"      // Triggered when an MMS is received.
-	WebhookEventMmsDownloaded   WebhookEvent = "mms:downloaded"    // Triggered when an MMS is downloaded.
-	WebhookEventAppStarted      WebhookEvent = "app:started"       // Triggered when the application is started.
+	WebhookEventSmsReceived          WebhookEvent = "sms:received"            // Triggered when an SMS is received.
+	WebhookEventSmsDataReceived      WebhookEvent = "sms:data-received"       // Triggered when a data SMS is received.
+	WebhookEventSmsSent              WebhookEvent = "sms:sent"                // Triggered when an SMS is sent.
+	WebhookEventSmsDelivered         WebhookEvent = "sms:delivered"           // Triggered when an SMS is delivered.
+	WebhookEventSmsFailed            WebhookEvent = "sms:failed"              // Triggered when an SMS processing fails.
+	WebhookEventSmsCancelled         WebhookEvent = "sms:cancelled"           // Triggered when an SMS is cancelled.
+	WebhookEventSystemPing           WebhookEvent = "system:ping"             // Triggered when the device pings the server.
+	WebhookEventMmsReceived          WebhookEvent = "mms:received"            // Triggered when an MMS is received.
+	WebhookEventMmsDownloaded        WebhookEvent = "mms:downloaded"          // Triggered when an MMS is downloaded.
+	WebhookEventAppStarted           WebhookEvent = "app:started"             // Triggered when the application is started.
+	WebhookEventSmsBatchReceived     WebhookEvent = "sms:batch:received"      // Triggered when a batch of SMS messages is received.
+	WebhookEventSmsBatchDataReceived WebhookEvent = "sms:batch:data-received" // Triggered when a batch of data SMS messages is received.
+	WebhookEventMmsBatchReceived     WebhookEvent = "mms:batch:received"      // Triggered when a batch of MMS messages is received.
+	WebhookEventMmsBatchDownloaded   WebhookEvent = "mms:batch:downloaded"    // Triggered when a batch of MMS messages is downloaded.
 )
 
 //nolint:gochecknoglobals // single source of truth for all webhook event types
@@ -32,6 +36,10 @@ var webhookEventTypes = []WebhookEvent{
 	WebhookEventMmsReceived,
 	WebhookEventMmsDownloaded,
 	WebhookEventAppStarted,
+	WebhookEventSmsBatchReceived,
+	WebhookEventSmsBatchDataReceived,
+	WebhookEventMmsBatchReceived,
+	WebhookEventMmsBatchDownloaded,
 }
 
 //nolint:gochecknoglobals // lookup table derived from webhookEventTypes
