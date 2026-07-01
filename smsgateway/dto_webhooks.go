@@ -125,6 +125,34 @@ type MmsDownloadedPayload struct {
 // SystemPingPayload represents the payload of `system:ping` event.
 type SystemPingPayload struct{}
 
+// SmsBatchReceivedPayload represents the payload of `sms:batch:received` event.
+//
+// Messages is the ordered list of received SMS messages.
+type SmsBatchReceivedPayload struct {
+	Messages []SmsReceivedPayload `json:"messages"` // The ordered list of received SMS messages.
+}
+
+// SmsBatchDataReceivedPayload represents the payload of `sms:batch:data-received` event.
+//
+// Messages is the ordered list of received data SMS messages.
+type SmsBatchDataReceivedPayload struct {
+	Messages []SmsDataReceivedPayload `json:"messages"` // The ordered list of received data SMS messages.
+}
+
+// MmsBatchReceivedPayload represents the payload of `mms:batch:received` event.
+//
+// Messages is the ordered list of received MMS messages.
+type MmsBatchReceivedPayload struct {
+	Messages []MmsReceivedPayload `json:"messages"` // The ordered list of received MMS messages.
+}
+
+// MmsBatchDownloadedPayload represents the payload of `mms:batch:downloaded` event.
+//
+// Messages is the ordered list of downloaded MMS messages.
+type MmsBatchDownloadedPayload struct {
+	Messages []MmsDownloadedPayload `json:"messages"` // The ordered list of downloaded MMS messages.
+}
+
 // AppStartedPayload represents the payload of `app:started` event.
 //
 // SimCards is the list of SIM cards available in the device.
