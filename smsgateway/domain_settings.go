@@ -11,6 +11,8 @@ const (
 	Disabled LimitPeriod = "Disabled"
 	// PerMinute sets the limit period to per minute.
 	PerMinute LimitPeriod = "PerMinute"
+	// Per30Minutes sets the limit period to per 30 minutes.
+	Per30Minutes LimitPeriod = "Per30Minutes"
 	// PerHour sets the limit period to per hour.
 	PerHour LimitPeriod = "PerHour"
 	// PerDay sets the limit period to per day.
@@ -86,8 +88,8 @@ type SettingsMessages struct {
 	SendIntervalMax *int `json:"send_interval_max,omitempty" validate:"omitempty,min=1"`
 
 	// LimitPeriod defines the period for message sending limits.
-	// Valid values are "Disabled", "PerMinute", "PerHour", or "PerDay".
-	LimitPeriod *LimitPeriod `json:"limit_period,omitempty" validate:"omitempty,oneof=Disabled PerMinute PerHour PerDay"`
+	// Valid values are "Disabled", "PerMinute", "Per30Minutes", "PerHour", or "PerDay".
+	LimitPeriod *LimitPeriod `json:"limit_period,omitempty" validate:"omitempty,oneof=Disabled PerMinute Per30Minutes PerHour PerDay"`
 
 	// LimitValue is the maximum number of messages allowed per limit period.
 	// Must be at least 1 when provided.
