@@ -21,6 +21,16 @@ type InboxRefreshRequest struct {
 	WebhookDelivery *WebhookDelivery      `json:"webhookDelivery,omitempty" validate:"omitempty,oneof=Disabled Individual Batch" example:"Batch"`                                    // Delivery mode for webhooks (overrides triggerWebhooks when set).
 }
 
+func (r InboxRefreshRequest) ResolveWebhookDelivery() WebhookDelivery {
+	if r.WebhookDelivery != nil {
+		return *r.WebhookDelivery
+	}
+	if r.TriggerWebhooks {
+		return WebhookDeliveryIndividual
+	}
+	return WebhookDeliveryDisabled
+}
+
 // MessagesExportRequest represents a request to export messages.
 //
 // Deprecated: use InboxRefreshRequest instead.
