@@ -377,6 +377,24 @@ func TestListMessagesOptions_ToURLValues(t *testing.T) {
 			},
 		},
 		{
+			name: "Sort created_at ascending",
+			options: smsgateway.ListMessagesOptions{
+				Sort: ptr(smsgateway.CreatedAtAscending),
+			},
+			expected: url.Values{
+				"sort": {"created_at"},
+			},
+		},
+		{
+			name: "Sort created_at descending",
+			options: smsgateway.ListMessagesOptions{
+				Sort: ptr(smsgateway.CreatedAtDescending),
+			},
+			expected: url.Values{
+				"sort": {"-created_at"},
+			},
+		},
+		{
 			name: "All fields set",
 			options: smsgateway.ListMessagesOptions{
 				From:           &from,
@@ -386,6 +404,7 @@ func TestListMessagesOptions_ToURLValues(t *testing.T) {
 				Limit:          ptr(100),
 				Offset:         ptr(0),
 				IncludeContent: ptr(true),
+				Sort:           ptr(smsgateway.CreatedAtDescending),
 			},
 			expected: url.Values{
 				"from":           {from.Format(time.RFC3339)},
@@ -395,6 +414,7 @@ func TestListMessagesOptions_ToURLValues(t *testing.T) {
 				"limit":          {"100"},
 				"offset":         {"0"},
 				"includeContent": {"true"},
+				"sort":           {"-created_at"},
 			},
 		},
 	}
