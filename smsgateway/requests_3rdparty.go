@@ -1,6 +1,7 @@
 package smsgateway
 
 import (
+	"fmt"
 	"net/url"
 	"strconv"
 	"time"
@@ -86,13 +87,22 @@ func (o ListInboxOptions) ToURLValues() url.Values {
 
 // ListMessagesOptions holds optional filters for listing messages.
 type ListMessagesOptions struct {
-	From           *time.Time
-	To             *time.Time
-	State          *string
-	DeviceID       *string
-	Limit          *int
-	Offset         *int
-	IncludeContent *bool
+	From           *time.Time `query:"from"           validate:"omitempty"`
+	To             *time.Time `query:"to"             validate:"omitempty"`
+	State          *string    `query:"state"          validate:"omitempty,oneof=Pending Cancelling Cancelled Processed Sent Delivered Failed"`
+	DeviceID       *string    `query:"deviceId"       validate:"omitempty,len=21"`
+	Limit          *int       `query:"limit"          validate:"omitempty,min=1,max=100"`
+	Offset         *int       `query:"offset"         validate:"omitempty,min=0"`
+	IncludeContent *bool      `query:"includeContent"`
+}
+
+// Validate checks if the ListMessagesOptions are valid.
+func (o ListMessagesOptions) Validate() error {
+	if o.From != nil && o.To != nil && o.From.After(*o.To) {
+		return fmt.Errorf("%w: `from` date must be before `to` date", ErrValidationFailed)
+	}
+
+	return nil
 }
 
 // ToURLValues returns the ListMessagesOptions as URL query parameters.
