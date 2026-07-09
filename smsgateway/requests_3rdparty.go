@@ -85,15 +85,17 @@ func (o ListInboxOptions) ToURLValues() url.Values {
 	return values
 }
 
-// ListMessagesOptions holds optional filters for listing messages.
+// ListMessagesOptions holds optional filters and sorting for listing messages.
+// Sorting follows the JSON:API specification (sort parameter).
 type ListMessagesOptions struct {
-	From           *time.Time `query:"from"           validate:"omitempty"`
-	To             *time.Time `query:"to"             validate:"omitempty"`
-	State          *string    `query:"state"          validate:"omitempty,oneof=Pending Cancelling Cancelled Processed Sent Delivered Failed"`
-	DeviceID       *string    `query:"deviceId"       validate:"omitempty,len=21"`
-	Limit          *int       `query:"limit"          validate:"omitempty,min=1,max=100"`
-	Offset         *int       `query:"offset"         validate:"omitempty,min=0"`
-	IncludeContent *bool      `query:"includeContent"`
+	From           *time.Time         `query:"from"`
+	To             *time.Time         `query:"to"`
+	State          *string            `query:"state"          validate:"omitempty,oneof=Pending Cancelling Cancelled Processed Sent Delivered Failed"`
+	DeviceID       *string            `query:"deviceId"       validate:"omitempty,len=21"`
+	Limit          *int               `query:"limit"          validate:"omitempty,min=1,max=100"`
+	Offset         *int               `query:"offset"         validate:"omitempty,min=0"`
+	IncludeContent *bool              `query:"includeContent"`
+	Sort           *MessagesSortOrder `query:"sort"           validate:"omitempty,oneof=created_at -created_at"`
 }
 
 // Validate checks if the ListMessagesOptions are valid.
@@ -129,5 +131,15 @@ func (o ListMessagesOptions) ToURLValues() url.Values {
 	if o.IncludeContent != nil {
 		values.Set("includeContent", strconv.FormatBool(*o.IncludeContent))
 	}
+	if o.Sort != nil {
+		values.Set("sort", string(*o.Sort))
+	}
 	return values
 }
+
+type MessagesSortOrder string
+
+const (
+	CreatedAtAscending  MessagesSortOrder = "created_at"
+	CreatedAtDescending MessagesSortOrder = "-created_at"
+)
