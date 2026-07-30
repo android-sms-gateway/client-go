@@ -3,6 +3,7 @@ package smsgateway_test
 import (
 	"context"
 	"io"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -234,6 +235,26 @@ func TestClient_Send(t *testing.T) {
 			want:    smsgateway.MessageState{},
 			wantErr: false,
 			query:   "deviceActiveWithin=48&skipPhoneValidation=true",
+		},
+		{
+			name: "DeviceActiveWithin out of range is rejected",
+			args: args{
+				ctx: context.Background(),
+				message: smsgateway.Message{
+					TextMessage: &smsgateway.TextMessage{
+						Text: "Hello World!",
+					},
+					PhoneNumbers: []string{"+1234567890"},
+				},
+				options: []smsgateway.SendOption{
+					func(o *smsgateway.SendOptions) {
+						outOfRange := math.MaxInt32 + 1
+						o.DeviceActiveWithin = &outOfRange
+					},
+				},
+			},
+			want:    smsgateway.MessageState{},
+			wantErr: true,
 		},
 	}
 
