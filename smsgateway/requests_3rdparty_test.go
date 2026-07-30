@@ -2,6 +2,7 @@ package smsgateway_test
 
 import (
 	"errors"
+	"math"
 	"net/url"
 	"reflect"
 	"testing"
@@ -70,6 +71,24 @@ func TestSendOptions_ToURLValues(t *testing.T) {
 				"deviceActiveWithin":  []string{"72"},
 			},
 		},
+		{
+			name: "deviceActiveWithin at MaxInt32",
+			options: []smsgateway.SendOption{
+				smsgateway.WithDeviceActiveWithin(math.MaxInt32),
+			},
+			expected: url.Values{
+				"deviceActiveWithin": []string{"2147483647"},
+			},
+		},
+		{
+			name: "deviceActiveWithin above MaxInt32 is clamped",
+			options: []smsgateway.SendOption{
+				smsgateway.WithDeviceActiveWithin(math.MaxInt32 + 1),
+			},
+			expected: url.Values{
+				"deviceActiveWithin": []string{"2147483647"},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -81,6 +100,64 @@ func TestSendOptions_ToURLValues(t *testing.T) {
 
 			if !reflect.DeepEqual(result, tt.expected) {
 				t.Errorf("ToURLValues() = %v, expected %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestSendOptions_Validate(t *testing.T) {
+	tests := []struct {
+		name    string
+		options *smsgateway.SendOptions
+		wantErr bool
+	}{
+		{
+			name:    "No options",
+			options: &smsgateway.SendOptions{},
+			wantErr: false,
+		},
+		{
+			name: "deviceActiveWithin at minimum",
+			options: &smsgateway.SendOptions{
+				DeviceActiveWithin: ptr(1),
+			},
+			wantErr: false,
+		},
+		{
+			name: "deviceActiveWithin at maximum",
+			options: &smsgateway.SendOptions{
+				DeviceActiveWithin: ptr(math.MaxInt32),
+			},
+			wantErr: false,
+		},
+		{
+			name: "deviceActiveWithin above MaxInt32",
+			options: &smsgateway.SendOptions{
+				DeviceActiveWithin: ptr(math.MaxInt32 + 1),
+			},
+			wantErr: true,
+		},
+		{
+			name: "deviceActiveWithin below minimum",
+			options: &smsgateway.SendOptions{
+				DeviceActiveWithin: ptr(0),
+			},
+			wantErr: true,
+		},
+		{
+			name: "deviceActiveWithin negative",
+			options: &smsgateway.SendOptions{
+				DeviceActiveWithin: ptr(-1),
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.options.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

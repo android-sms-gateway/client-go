@@ -51,6 +51,9 @@ func NewClient(config Config) *Client {
 // Send enqueues a message for sending.
 func (c *Client) Send(ctx context.Context, message Message, options ...SendOption) (MessageState, error) {
 	opts := new(SendOptions).Apply(options...)
+	if err := opts.Validate(); err != nil {
+		return MessageState{}, fmt.Errorf("failed to send message: %w", err)
+	}
 	path := "/messages?" + opts.ToURLValues().Encode()
 	resp := new(MessageState)
 

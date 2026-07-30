@@ -2,6 +2,7 @@ package smsgateway
 
 import (
 	"fmt"
+	"math"
 	"net/url"
 	"strconv"
 	"time"
@@ -10,8 +11,8 @@ import (
 type SendOption func(*SendOptions)
 
 type SendOptions struct {
-	skipPhoneValidation *bool
-	deviceActiveWithin  *uint
+	SkipPhoneValidation *bool `query:"skipPhoneValidation"`
+	DeviceActiveWithin  *int  `query:"deviceActiveWithin"  validate:"omitzero,min=1"`
 }
 
 func (o *SendOptions) Apply(options ...SendOption) *SendOptions {
@@ -22,15 +23,24 @@ func (o *SendOptions) Apply(options ...SendOption) *SendOptions {
 	return o
 }
 
+// Validate checks if the SendOptions are valid.
+func (o *SendOptions) Validate() error {
+	if o.DeviceActiveWithin != nil && (*o.DeviceActiveWithin < 1 || *o.DeviceActiveWithin > math.MaxInt32) {
+		return fmt.Errorf("%w: `deviceActiveWithin` must be between 1 and %d", ErrValidationFailed, math.MaxInt32)
+	}
+
+	return nil
+}
+
 // ToURLValues returns the SendOptions as a URL query string in the form of [url.Values].
 // It includes only the options that have been set.
 func (o *SendOptions) ToURLValues() url.Values {
 	values := url.Values{}
-	if o.skipPhoneValidation != nil {
-		values.Set("skipPhoneValidation", strconv.FormatBool(*o.skipPhoneValidation))
+	if o.SkipPhoneValidation != nil {
+		values.Set("skipPhoneValidation", strconv.FormatBool(*o.SkipPhoneValidation))
 	}
-	if o.deviceActiveWithin != nil {
-		values.Set("deviceActiveWithin", strconv.FormatUint(uint64(*o.deviceActiveWithin), 10))
+	if o.DeviceActiveWithin != nil {
+		values.Set("deviceActiveWithin", strconv.Itoa(*o.DeviceActiveWithin))
 	}
 	return values
 }
@@ -39,7 +49,7 @@ func (o *SendOptions) ToURLValues() url.Values {
 // validation for messages. Validation is enabled by default.
 func WithSkipPhoneValidation(skipPhoneValidation bool) SendOption {
 	return func(o *SendOptions) {
-		o.skipPhoneValidation = &skipPhoneValidation
+		o.SkipPhoneValidation = &skipPhoneValidation
 	}
 }
 
@@ -47,7 +57,14 @@ func WithSkipPhoneValidation(skipPhoneValidation bool) SendOption {
 // been active within the given number of hours.
 func WithDeviceActiveWithin(hours uint) SendOption {
 	return func(o *SendOptions) {
-		o.deviceActiveWithin = &hours
+		var h int
+		if hours > math.MaxInt32 {
+			h = math.MaxInt32
+		} else {
+			h = int(hours)
+		}
+
+		o.DeviceActiveWithin = &h
 	}
 }
 
