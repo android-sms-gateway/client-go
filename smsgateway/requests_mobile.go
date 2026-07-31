@@ -4,6 +4,8 @@ import "time"
 
 // MobileRegisterRequest represents a request to register a mobile device.
 type MobileRegisterRequest struct {
+	VersionedPublicKey
+
 	Name      *string   `json:"name,omitempty"     validate:"omitempty,max=128" example:"Android Phone"`         // Name of the device (optional)
 	PushToken *string   `json:"pushToken"          validate:"omitempty,max=256" example:"gHz-T6NezDlOfllr7F-Be"` // FCM token of the device (optional)
 	SimCards  []SimCard `json:"simCards,omitempty"`                                                              // SIM cards (optional)
@@ -11,10 +13,10 @@ type MobileRegisterRequest struct {
 
 // MobileUpdateRequest represents a request to update a mobile device.
 type MobileUpdateRequest struct {
+	MobileRegisterRequest
+
 	//nolint:revive,staticcheck // backward compatibility
-	Id        string    `json:"id"                 example:"QslD_GefqiYV6RQXdkM6V"`                              // Device ID
-	PushToken string    `json:"pushToken"          example:"gHz-T6NezDlOfllr7F-Be" validate:"omitempty,max=256"` // FCM token of the device (optional)
-	SimCards  []SimCard `json:"simCards,omitempty"`                                                              // SIM cards (optional)
+	Id string `json:"id" example:"QslD_GefqiYV6RQXdkM6V"` // Device ID
 }
 
 // MobileChangePasswordRequest represents a request to change the password of a mobile device.

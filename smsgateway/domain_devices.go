@@ -2,8 +2,16 @@ package smsgateway
 
 import "time"
 
+// VersionedPublicKey represents a public key for E2E encryption.
+type VersionedPublicKey struct {
+	PublicKey  *string `json:"publicKey,omitempty"  example:"MIIBIjANBgkqh..."` // Base64-encoded RSA public key for E2E encryption (nullable)
+	KeyVersion *int    `json:"keyVersion,omitempty" example:"1"`                // Key version for rotation tracking
+}
+
 // Device represents a device registered on the server.
 type Device struct {
+	VersionedPublicKey
+
 	ID        string     `json:"id"                  example:"PyDmBQZZXYmyxMwED8Fzy"` // Device ID, read only.
 	Name      string     `json:"name"                example:"My Device"`             // Device name.
 	CreatedAt time.Time  `json:"createdAt"           example:"2020-01-01T00:00:00Z"`  // Time at which the device was created, read only.
