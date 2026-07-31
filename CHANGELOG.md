@@ -7,6 +7,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ## [Unreleased]
 
 ### New Features
+#### Device public-key metadata
+- **Added versioned public-key DTOs** — `VersionedPublicKey` adds optional base64 `PublicKey` and `KeyVersion` fields to `Device` and mobile request DTOs; `MobileUpdateRequest` receives them through its embedded `MobileRegisterRequest`.
+
+#### Recipient validation
+- **Expanded phone-number length limits** — validation metadata now permits up to 512 characters for each `Message.PhoneNumbers` entry and for `RecipientState.PhoneNumber`.
+
+### Breaking Changes
+- **`MobileUpdateRequest.PushToken` is now a pointer** — the field is supplied by the embedded `MobileRegisterRequest` as `*string`; composite literals must initialize the embedded request and its `PushToken` field explicitly.
+
+## [1.16.0] - 2026-09-25
+
+### New Features
 #### Message scheduling
 - **Added `Message.ValidUntilTime(now)`** — resolves the effective expiry of a message from `ValidUntil`, or from `TTL` computed against `now`, returning `nil` when neither is set.
 
@@ -14,6 +26,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **Inbox messages expose MMS attachments and encryption state** — `IncomingMessage` now includes `Attachments` (typed `InboxAttachment` entries with part ID, file name, size, and MIME type) and an `IsEncrypted` flag.
 - **New `inbox:read` JWT scope** — added `ScopeInboxRead` for read-only inbox access.
 - **Shared list filters for messages and inbox** — `ListInboxOptions` and `ListMessagesOptions` now embed `PaginationOptions` (`limit`, `offset`) and `DatePeriodOptions` (`from`, `to`), so both listings use the same typed filters.
+- **Attachment metadata option for inbox listing** — `ListInboxOptions.IncludeAttachments` requests metadata for MMS inbox messages.
+- **Mobile inbox upload DTOs** — `MobilePostInboxRequest`, `MobilePostInboxRequestItem`, and `MobilePostInboxRequestItemAttachment` model batch uploads with message metadata, encryption state, and attachment data.
 
 ### Bug Fixes
 - **`Message.Validate()` rejects impossible schedules** — a message whose `scheduleAt` is later than its effective expiry (`validUntil` or `ttl`) now fails validation with an error wrapping `ErrValidationFailed`.
