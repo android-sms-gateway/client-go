@@ -19,13 +19,13 @@
 <h3 align="center">client-go</h3>
 
   <p align="center">
-    Go client library for SMSGate APIs.
+    Go client library for the SMSGate APIs.
     <br />
-    <a href="https://api.sms-gate.app/"><strong>Explore API docs »</strong></a>
+    <a href="https://api.sms-gate.app/"><strong>Explore API docs &gt;</strong></a>
     <br />
     <br />
     <a href="https://github.com/android-sms-gateway/client-go/issues">Report Bug</a>
-    ·
+    |
     <a href="https://github.com/android-sms-gateway/client-go/issues">Request Feature</a>
   </p>
 </div>
@@ -40,6 +40,7 @@
 	- [Installation](#installation)
 - [Usage](#usage)
 	- [Sending a text message](#sending-a-text-message)
+	- [Sending a data message](#sending-a-data-message)
 	- [Listing incoming messages](#listing-incoming-messages)
 	- [Certificate Authority client](#certificate-authority-client)
 	- [Error handling](#error-handling)
@@ -56,7 +57,7 @@
 
 ## About The Project
 
-`client-go` provides typed clients for the SMSGate ecosystem:
+`client-go` provides typed Go clients for the SMSGate ecosystem:
 
 - `smsgateway` - client for the SMSGate 3rd-party API (messages, inbox, devices, health, logs, settings, webhooks, and token lifecycle).
 - `ca` - client for the SMSGate Certificate Authority service (submit CSRs and poll their status).
@@ -139,6 +140,24 @@ func main() {
 
 `Send` accepts optional `SendOption` values, for example `smsgateway.WithSkipPhoneValidation(true)` and `smsgateway.WithDeviceActiveWithin(24)`.
 
+### Sending a data message
+
+```go
+state, err := client.Send(ctx, smsgateway.Message{
+	DataMessage: &smsgateway.DataMessage{
+		Data: "SGVsbG8gV29ybGQh", // base64-encoded payload
+		Port: 53739,
+	},
+	PhoneNumbers: []string{
+		"+15555550100",
+	},
+})
+if err != nil {
+	log.Fatal(err)
+}
+log.Printf("message queued: %s", state.ID)
+```
+
 ### Listing incoming messages
 
 ```go
@@ -191,7 +210,15 @@ func main() {
 
 ### Error handling
 
-API failures are wrapped in sentinel errors. Use `errors.Is` with the predicates from the `rest` package to react to failure classes:
+The `rest` package exposes sentinel errors that you can match with `errors.Is` or the provided helpers:
+
+- `rest.ErrAPIError` — base API error; `rest.IsAPIError` for any API failure
+- `rest.ErrClient` / `rest.IsClientError` — 4xx client errors
+- `rest.ErrServer` / `rest.IsServerError` — 5xx server errors
+- `rest.ErrBadRequest` / `rest.IsBadRequest` — 400 validation failures
+- `rest.ErrConflict` / `rest.IsConflict` — 409 conflicts
+
+Continuing the `smsgateway` example above:
 
 ```go
 import (
@@ -229,7 +256,7 @@ The library reads no environment variables; credentials and options are set on t
 | `Password` | `string`       | empty                                  | Basic auth password                          |
 | `Token`    | `string`       | empty                                  | Bearer token, takes priority over Basic auth |
 
-Chained helpers are available for the same fields: `Config.WithClient`, `Config.WithBaseURL`, `Config.WithBasicAuth(user, password)`, and `Config.WithJWTAuth(token)`.
+Chained helpers are available for the same fields: `Config.WithClient`, `Config.WithBaseURL`, `Config.WithBasicAuth(user, password)`, and `Config.WithJWTAuth(token)`. `Config.Validate()` reports an error wrapping `ErrInvalidConfig` when no credentials are set.
 
 ### `ca` package
 
