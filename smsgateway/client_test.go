@@ -1140,11 +1140,15 @@ func TestClient_ListInboxMessages(t *testing.T) {
 
 		client := newClient(server.URL)
 		msgs, total, err := client.ListInboxMessages(context.Background(), smsgateway.ListInboxOptions{
-			Type:     &msgType,
-			Limit:    &limit,
-			Offset:   &offset,
-			From:     &from,
-			To:       &to,
+			Type: &msgType,
+			PaginationOptions: smsgateway.PaginationOptions{
+				Limit:  &limit,
+				Offset: &offset,
+			},
+			DatePeriodOptions: smsgateway.DatePeriodOptions{
+				From: &from,
+				To:   &to,
+			},
 			DeviceID: &deviceID,
 		})
 		if err != nil {
@@ -1311,12 +1315,16 @@ func TestClient_ListMessages(t *testing.T) {
 
 		client := newClient(server.URL)
 		msgs, total, err := client.ListMessages(context.Background(), smsgateway.ListMessagesOptions{
-			From:           &from,
-			To:             &to,
-			State:          &state,
-			DeviceID:       &deviceID,
-			Limit:          &limit,
-			Offset:         &offset,
+			DatePeriodOptions: smsgateway.DatePeriodOptions{
+				From: &from,
+				To:   &to,
+			},
+			State:    &state,
+			DeviceID: &deviceID,
+			PaginationOptions: smsgateway.PaginationOptions{
+				Limit:  &limit,
+				Offset: &offset,
+			},
 			IncludeContent: &includeContent,
 		})
 		if err != nil {

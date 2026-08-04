@@ -8,6 +8,7 @@ const (
 
 	ScopeInboxList    JWTScope = "inbox:list"
 	ScopeInboxRefresh JWTScope = "inbox:refresh"
+	ScopeInboxRead    JWTScope = "inbox:read"
 
 	ScopeLogsRead JWTScope = "logs:read"
 
