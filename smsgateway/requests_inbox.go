@@ -1,6 +1,40 @@
 package smsgateway
 
-import "time"
+import (
+	"maps"
+	"net/url"
+	"strconv"
+	"time"
+)
+
+// ListInboxOptions holds optional filters for listing inbox messages.
+type ListInboxOptions struct {
+	DatePeriodOptions
+	PaginationOptions
+
+	Type               *IncomingMessageType `query:"type"               validate:"omitempty,oneof=SMS DATA_SMS MMS MMS_DOWNLOADED"`
+	DeviceID           *string              `query:"deviceId"           validate:"omitempty,len=21"`
+	IncludeAttachments *bool                `query:"includeAttachments"` // Include attachment metadata in response (for MMS messages).
+}
+
+// ToURLValues returns the ListInboxOptions as URL query parameters.
+func (o ListInboxOptions) ToURLValues() url.Values {
+	values := url.Values{}
+	if o.Type != nil {
+		values.Set("type", string(*o.Type))
+	}
+	if o.DeviceID != nil {
+		values.Set("deviceId", *o.DeviceID)
+	}
+	if o.IncludeAttachments != nil {
+		values.Set("includeAttachments", strconv.FormatBool(*o.IncludeAttachments))
+	}
+
+	maps.Copy(values, o.DatePeriodOptions.ToURLValues())
+	maps.Copy(values, o.PaginationOptions.ToURLValues())
+
+	return values
+}
 
 // WebhookDelivery represents the delivery mode for webhooks.
 type WebhookDelivery string

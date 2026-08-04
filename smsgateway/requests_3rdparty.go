@@ -2,11 +2,44 @@ package smsgateway
 
 import (
 	"fmt"
+	"maps"
 	"math"
 	"net/url"
 	"strconv"
 	"time"
 )
+
+type PaginationOptions struct {
+	Limit  *int `query:"limit"  validate:"omitempty,min=1,max=100" default:"50"`
+	Offset *int `query:"offset" validate:"omitempty,min=0"`
+}
+
+func (o PaginationOptions) ToURLValues() url.Values {
+	values := url.Values{}
+	if o.Limit != nil {
+		values.Set("limit", strconv.Itoa(*o.Limit))
+	}
+	if o.Offset != nil {
+		values.Set("offset", strconv.Itoa(*o.Offset))
+	}
+	return values
+}
+
+type DatePeriodOptions struct {
+	From *time.Time `query:"from"`
+	To   *time.Time `query:"to"`
+}
+
+func (o DatePeriodOptions) ToURLValues() url.Values {
+	values := url.Values{}
+	if o.From != nil {
+		values.Set("from", o.From.Format(time.RFC3339))
+	}
+	if o.To != nil {
+		values.Set("to", o.To.Format(time.RFC3339))
+	}
+	return values
+}
 
 type SendOption func(*SendOptions)
 
@@ -68,49 +101,14 @@ func WithDeviceActiveWithin(hours uint) SendOption {
 	}
 }
 
-// ListInboxOptions holds optional filters for listing inbox messages.
-type ListInboxOptions struct {
-	Type     *IncomingMessageType
-	Limit    *int
-	Offset   *int
-	From     *time.Time
-	To       *time.Time
-	DeviceID *string
-}
-
-// ToURLValues returns the ListInboxOptions as URL query parameters.
-func (o ListInboxOptions) ToURLValues() url.Values {
-	values := url.Values{}
-	if o.Type != nil {
-		values.Set("type", string(*o.Type))
-	}
-	if o.Limit != nil {
-		values.Set("limit", strconv.Itoa(*o.Limit))
-	}
-	if o.Offset != nil {
-		values.Set("offset", strconv.Itoa(*o.Offset))
-	}
-	if o.From != nil {
-		values.Set("from", o.From.Format(time.RFC3339))
-	}
-	if o.To != nil {
-		values.Set("to", o.To.Format(time.RFC3339))
-	}
-	if o.DeviceID != nil {
-		values.Set("deviceId", *o.DeviceID)
-	}
-	return values
-}
-
 // ListMessagesOptions holds optional filters and sorting for listing messages.
 // Sorting follows the JSON:API specification (sort parameter).
 type ListMessagesOptions struct {
-	From           *time.Time         `query:"from"`
-	To             *time.Time         `query:"to"`
+	DatePeriodOptions
+	PaginationOptions
+
 	State          *string            `query:"state"          validate:"omitempty,oneof=Pending Cancelling Cancelled Processed Sent Delivered Failed"`
 	DeviceID       *string            `query:"deviceId"       validate:"omitempty,len=21"`
-	Limit          *int               `query:"limit"          validate:"omitempty,min=1,max=100"`
-	Offset         *int               `query:"offset"         validate:"omitempty,min=0"`
 	IncludeContent *bool              `query:"includeContent"`
 	Sort           *MessagesSortOrder `query:"sort"           validate:"omitempty,oneof=created_at -created_at"`
 }
@@ -127,23 +125,11 @@ func (o ListMessagesOptions) Validate() error {
 // ToURLValues returns the ListMessagesOptions as URL query parameters.
 func (o ListMessagesOptions) ToURLValues() url.Values {
 	values := url.Values{}
-	if o.From != nil {
-		values.Set("from", o.From.Format(time.RFC3339))
-	}
-	if o.To != nil {
-		values.Set("to", o.To.Format(time.RFC3339))
-	}
 	if o.State != nil {
 		values.Set("state", *o.State)
 	}
 	if o.DeviceID != nil {
 		values.Set("deviceId", *o.DeviceID)
-	}
-	if o.Limit != nil {
-		values.Set("limit", strconv.Itoa(*o.Limit))
-	}
-	if o.Offset != nil {
-		values.Set("offset", strconv.Itoa(*o.Offset))
 	}
 	if o.IncludeContent != nil {
 		values.Set("includeContent", strconv.FormatBool(*o.IncludeContent))
@@ -151,6 +137,10 @@ func (o ListMessagesOptions) ToURLValues() url.Values {
 	if o.Sort != nil {
 		values.Set("sort", string(*o.Sort))
 	}
+
+	maps.Copy(values, o.DatePeriodOptions.ToURLValues())
+	maps.Copy(values, o.PaginationOptions.ToURLValues())
+
 	return values
 }
 
