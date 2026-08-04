@@ -135,7 +135,7 @@ func (c *Client) ExportInbox(ctx context.Context, req MessagesExportRequest) err
 	return nil
 }
 
-// ListInboxMessages retrieves incoming messages with filtering and pagination.
+// ListInboxMessages retrieves inbox messages with filtering and pagination.
 // Returns the messages, total count (from X-Total-Count header), and error.
 func (c *Client) ListInboxMessages(ctx context.Context, opts ListInboxOptions) ([]IncomingMessage, int, error) {
 	path := "/inbox?" + opts.ToURLValues().Encode()
