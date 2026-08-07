@@ -13,6 +13,7 @@ type SendOption func(*SendOptions)
 type SendOptions struct {
 	SkipPhoneValidation *bool `query:"skipPhoneValidation"`
 	DeviceActiveWithin  *int  `query:"deviceActiveWithin"  validate:"omitzero,min=1"`
+	e2eEncryption       *bool
 }
 
 func (o *SendOptions) Apply(options ...SendOption) *SendOptions {
@@ -65,6 +66,21 @@ func WithDeviceActiveWithin(hours uint) SendOption {
 		}
 
 		o.DeviceActiveWithin = &h
+	}
+}
+
+// WithE2EEncryption controls end-to-end encryption (RSA-2048 + AES-256-GCM)
+// for the message.
+//
+// When true, encryption is REQUIRED: the message must carry a DeviceID and the
+// target device must expose a publicKey + keyVersion, otherwise a typed error
+// is returned and nothing is sent. When false, E2E is disabled even if the
+// target device has a key. When unset, E2E is applied automatically for
+// devices that have a publicKey + keyVersion; devices without a key fall back
+// to plaintext.
+func WithE2EEncryption(enabled bool) SendOption {
+	return func(o *SendOptions) {
+		o.e2eEncryption = &enabled
 	}
 }
 

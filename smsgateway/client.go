@@ -3,10 +3,12 @@ package smsgateway
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/android-sms-gateway/client-go/rest"
@@ -15,15 +17,31 @@ import (
 const BaseURL = "https://api.sms-gate.app/3rdparty/v1"
 const settingsPath = "/settings"
 
+// defaultDeviceCacheTTL matches the TS SDK's 60s device cache TTL.
+const defaultDeviceCacheTTL = 60 * time.Second
+
 // Deprecated: BASE_URL is kept for backward compatibility. Use BaseURL instead.
 //
 //nolint:revive,staticcheck // backward compatibility
 const BASE_URL = BaseURL
 
+// cachedDevice is a device listing entry with its fetch time; entries expire
+// after the client's deviceCacheTTL (expiry checked at read).
+type cachedDevice struct {
+	device    Device
+	fetchedAt time.Time
+}
+
 type Client struct {
 	*rest.Client
 
 	headers map[string]string
+
+	deviceCacheMu  sync.Mutex
+	deviceCache    map[string]cachedDevice
+	deviceCacheTTL time.Duration
+
+	encryptor Encryptor
 }
 
 // NewClient creates a new instance of the API Client.
@@ -39,12 +57,21 @@ func NewClient(config Config) *Client {
 		headers["Authorization"] = "Basic " + base64.StdEncoding.EncodeToString([]byte(config.User+":"+config.Password))
 	}
 
+	deviceCacheTTL := config.DeviceCacheTTL
+	if deviceCacheTTL <= 0 {
+		deviceCacheTTL = defaultDeviceCacheTTL
+	}
+
 	return &Client{
 		Client: rest.NewClient(rest.Config{
 			Client:  config.Client,
 			BaseURL: config.BaseURL,
 		}),
-		headers: headers,
+		headers:        headers,
+		deviceCacheMu:  sync.Mutex{},
+		deviceCache:    make(map[string]cachedDevice),
+		deviceCacheTTL: deviceCacheTTL,
+		encryptor:      config.Encryptor,
 	}
 }
 
@@ -57,11 +84,167 @@ func (c *Client) Send(ctx context.Context, message Message, options ...SendOptio
 	path := "/messages?" + opts.ToURLValues().Encode()
 	resp := new(MessageState)
 
+	if err := c.applyE2E(ctx, &message, opts); err != nil {
+		return *resp, fmt.Errorf("failed to send message: %w", err)
+	}
+
 	if err := c.Do(ctx, http.MethodPost, path, c.headers, &message, resp); err != nil {
 		return *resp, fmt.Errorf("failed to send message: %w", err)
 	}
 
 	return *resp, nil
+}
+
+// applyE2E encrypts the message payload and phone numbers with the target
+// device's E2E key when required or when the device is keyed. It mutates the
+// message in place. Errors are typed (ErrDeviceIDRequired, ErrDeviceNotFound,
+// ErrE2ENotConfigured) and the message is never sent on failure.
+func (c *Client) applyE2E(ctx context.Context, message *Message, opts *SendOptions) error {
+	required := opts.e2eEncryption != nil && *opts.e2eEncryption
+
+	// No encryptor installed: send plaintext with no device-list lookup. An
+	// explicit required demand is never silently downgraded, so it is checked
+	// before the verbatim short-circuit below.
+	if c.encryptor == nil {
+		if required {
+			return ErrE2ENotConfigured
+		}
+
+		return nil
+	}
+
+	// Messages the caller already marked as encrypted, or whose body already
+	// carries an encrypted-format prefix (E2E or legacy passphrase), are sent
+	// verbatim: never double-encrypt.
+	if message.IsEncrypted || hasEncryptedFormatPrefix(message.content()) {
+		return nil
+	}
+
+	if opts.e2eEncryption != nil && !*opts.e2eEncryption {
+		return nil
+	}
+
+	if message.DeviceID == "" {
+		if required {
+			return ErrDeviceIDRequired
+		}
+
+		return nil
+	}
+
+	device, err := c.resolveDevice(ctx, message.DeviceID)
+	if err != nil {
+		if !required && errors.Is(err, ErrDeviceNotFound) {
+			// Unknown device: no key is known, so fall back to plaintext
+			// (deviceId preserved) for backward compatibility.
+			return nil
+		}
+
+		return fmt.Errorf("failed to resolve device: %w", err)
+	}
+
+	return c.encryptMessage(required, device, message)
+}
+
+// encryptMessage encrypts the message body and each phone number with the
+// device's E2E key. The body and every phone number get their own fresh AES
+// key and 12-byte IV; the body itself is never double-encrypted.
+//
+// In auto mode (!required) an [ErrE2ENotConfigured] from the encryptor (unkeyed
+// or non-RSA device) falls back to plaintext, leaving the message untouched;
+// required mode propagates the error and never sends plaintext.
+func (c *Client) encryptMessage(required bool, device Device, message *Message) error {
+	encrypt := func(value string) (string, error) {
+		return c.encryptor.Encrypt(device, value)
+	}
+
+	err := encryptMessageContent(encrypt, message)
+	if err != nil {
+		if !required && errors.Is(err, ErrE2ENotConfigured) {
+			return nil
+		}
+
+		return fmt.Errorf("failed to encrypt message: %w", err)
+	}
+
+	for i, phone := range message.PhoneNumbers {
+		var encrypted string
+		encrypted, err = encrypt(phone)
+		if err != nil {
+			if !required && errors.Is(err, ErrE2ENotConfigured) {
+				return nil
+			}
+
+			return fmt.Errorf("failed to encrypt phone number: %w", err)
+		}
+
+		message.PhoneNumbers[i] = encrypted
+	}
+
+	message.IsEncrypted = true
+
+	return nil
+}
+
+// encryptMessageContent encrypts whichever content field is set, leaving the
+// others untouched. The field is committed only on success so a
+// key-extraction error cannot overwrite the caller's body.
+func encryptMessageContent(encrypt func(string) (string, error), message *Message) error {
+	switch {
+	case message.TextMessage != nil:
+		encrypted, err := encrypt(message.TextMessage.Text)
+		if err != nil {
+			return err
+		}
+		message.TextMessage.Text = encrypted
+	case message.DataMessage != nil:
+		encrypted, err := encrypt(message.DataMessage.Data)
+		if err != nil {
+			return err
+		}
+		message.DataMessage.Data = encrypted
+	case message.Message != "":
+		encrypted, err := encrypt(message.Message)
+		if err != nil {
+			return err
+		}
+		message.Message = encrypted
+	}
+
+	return nil
+}
+
+// resolveDevice returns the device listing entry for the given deviceId,
+// caching it per deviceId so repeated sends do not refetch the listing.
+// Entries expire after deviceCacheTTL (default 60s, matching the TS SDK);
+// expired entries are treated as misses and re-fetch the listing.
+func (c *Client) resolveDevice(ctx context.Context, deviceID string) (Device, error) {
+	c.deviceCacheMu.Lock()
+	if entry, ok := c.deviceCache[deviceID]; ok && time.Since(entry.fetchedAt) < c.deviceCacheTTL {
+		c.deviceCacheMu.Unlock()
+
+		return entry.device, nil
+	}
+	c.deviceCacheMu.Unlock()
+
+	devices, err := c.ListDevices(ctx)
+	if err != nil {
+		return Device{}, err
+	}
+
+	for _, device := range devices {
+		if device.ID != deviceID {
+			continue
+		}
+
+		c.deviceCacheMu.Lock()
+		c.deviceCache[deviceID] = cachedDevice{device: device, fetchedAt: time.Now()}
+		c.deviceCacheMu.Unlock()
+
+		return device, nil
+	}
+
+	return Device{}, ErrDeviceNotFound
 }
 
 // CancelMessage cancels a pending message by ID.

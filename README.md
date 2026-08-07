@@ -87,6 +87,8 @@ go get github.com/android-sms-gateway/client-go
 
 ### SMSGate client (`smsgateway`)
 
+#### Basic send
+
 ```go
 package main
 
@@ -120,6 +122,55 @@ func main() {
 	log.Printf("message queued: %s", state.ID)
 }
 ```
+
+#### E2E encryption
+
+End-to-end encryption is optional and injected into the client. Without an
+encryptor, messages are sent as plaintext exactly as before and no device
+listing lookup happens. To enable E2E, install an encryptor via
+`Config.WithEncryptor`:
+
+```go
+client := smsgateway.NewClient(
+    smsgateway.Config{
+        User:     os.Getenv("ASG_USERNAME"),
+        Password: os.Getenv("ASG_PASSWORD"),
+    }.WithEncryptor(smsgateway.NewEncryptor()),
+)
+```
+
+With an encryptor installed, E2E is applied **by default**: set `DeviceID` to
+the target device so the client can resolve its `publicKey` + `keyVersion`
+from the device listing, and the encryptor encrypts the body and every phone
+number with hybrid RSA-OAEP (SHA-256) + AES-256-GCM and marks the message with
+`IsEncrypted`.
+
+```go
+state, err := client.Send(ctx, smsgateway.Message{
+    DeviceID:     "PyDmBQZZXYmyxMwED8Fzy",
+    TextMessage:  &smsgateway.TextMessage{Text: "Secret payload"},
+    PhoneNumbers: []string{"+15555550100"},
+})
+if err != nil {
+    log.Fatal(err)
+}
+```
+
+Wire format: `$rsa-oaep-aes-256-gcm$v=1$k={keyVersion}${base64(encrypted_aes_key)}${base64(iv)}${base64(ciphertext || tag)}`.
+
+- `deviceId` is required for encryption; a missing `deviceId` with
+  `WithE2EEncryption(true)` returns `ErrDeviceIDRequired`.
+- Pass `WithE2EEncryption(true)` to require encryption: a device without a
+  usable `publicKey`/`keyVersion` (or an unknown device) then returns the typed
+  `ErrE2ENotConfigured` / `ErrDeviceNotFound`, and nothing is sent.
+- In the default auto mode, devices without a key (or unknown devices) fall
+  back to plaintext - `ErrE2ENotConfigured` is only ever returned when
+  encryption is explicitly required.
+- Pass `WithE2EEncryption(false)` to disable E2E for a message even when a
+  device has a key.
+- Passphrase encryption (`$aes-256-cbc/pbkdf2-sha1$`) is not implemented yet;
+  the wire prefix is reserved and messages already carrying an encrypted-format
+  prefix are always sent verbatim, never re-encrypted.
 
 ### Certificate Authority client (`ca`)
 

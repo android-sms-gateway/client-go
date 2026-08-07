@@ -123,6 +123,19 @@ func (m *Message) GetDataMessage() *DataMessage {
 	return m.DataMessage
 }
 
+// content returns the message body string for the single set content field,
+// mirroring the request wire format (Message is the deprecated legacy field).
+func (m *Message) content() string {
+	switch {
+	case m.TextMessage != nil:
+		return m.TextMessage.Text
+	case m.DataMessage != nil:
+		return m.DataMessage.Data
+	default:
+		return m.Message
+	}
+}
+
 // Validate validates the Message structure.
 func (m *Message) Validate() error {
 	fields := []bool{
