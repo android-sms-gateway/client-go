@@ -47,8 +47,7 @@ func (c Config) WithJWTAuth(token string) Config {
 }
 
 // WithBasicAuth sets the Basic Auth credentials for the API client.
-// This is useful for testing or custom HTTP clients.
-// If the user or password is empty, it defaults to an empty string.
+// These are used when no Bearer token is set (see [WithJWTAuth]).
 func (c Config) WithBasicAuth(user, password string) Config {
 	c.User = user
 	c.Password = password

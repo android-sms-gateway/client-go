@@ -14,6 +14,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -25,6 +26,7 @@ import (
 // e2eMock is a small route-aware server for E2E Send/GetState tests.
 type e2eMock struct {
 	devices         string
+	devicesCode     int
 	postCode        int
 	postBody        string
 	stateBody       string
@@ -40,22 +42,31 @@ func (m *e2eMock) handler() http.Handler {
 			m.mu.Lock()
 			m.listDevicesCall++
 			devices := m.devices
+			code := m.devicesCode
 			m.mu.Unlock()
+			if code == 0 {
+				code = http.StatusOK
+			}
 			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(code)
 			_, _ = io.WriteString(w, devices)
 		case r.Method == http.MethodPost && r.URL.Path == "/messages":
 			m.mu.Lock()
 			m.postCall++
 			body, _ := io.ReadAll(r.Body)
 			m.postBody = string(body)
+			code, state := m.postCode, m.stateBody
 			m.mu.Unlock()
-			w.WriteHeader(m.postCode)
-			if m.stateBody != "" {
-				_, _ = io.WriteString(w, m.stateBody)
+			w.WriteHeader(code)
+			if state != "" {
+				_, _ = io.WriteString(w, state)
 			}
 		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/messages/"):
+			m.mu.Lock()
+			state := m.stateBody
+			m.mu.Unlock()
 			w.Header().Set("Content-Type", "application/json")
-			_, _ = io.WriteString(w, m.stateBody)
+			_, _ = io.WriteString(w, state)
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -97,35 +108,13 @@ func newE2EMockEncTTL(t *testing.T, m *e2eMock, encryptor smsgateway.Encryptor, 
 func keyedDeviceJSON(t *testing.T, id string, keyVersion int) string {
 	t.Helper()
 	v := loadVector(t)
-	return `[{"id":"` + id + `","name":"Test","createdAt":"2025-01-01T00:00:00Z","updatedAt":"2025-01-01T00:00:00Z","lastSeen":"2025-01-01T00:00:00Z","publicKey":"` + v.PublicKeySpkiBase64 + `","keyVersion":` + itoa(
+	return `[{"id":"` + id + `","name":"Test","createdAt":"2025-01-01T00:00:00Z","updatedAt":"2025-01-01T00:00:00Z","lastSeen":"2025-01-01T00:00:00Z","publicKey":"` + v.PublicKeySpkiBase64 + `","keyVersion":` + strconv.Itoa(
 		keyVersion,
 	) + `}]`
 }
 
 func unkeyedDeviceJSON(id string) string {
 	return `[{"id":"` + id + `","name":"Test","createdAt":"2025-01-01T00:00:00Z","updatedAt":"2025-01-01T00:00:00Z","lastSeen":"2025-01-01T00:00:00Z"}]`
-}
-
-func itoa(n int) string {
-	if n == 0 {
-		return "0"
-	}
-	neg := n < 0
-	if neg {
-		n = -n
-	}
-	var b [20]byte
-	i := len(b)
-	for n > 0 {
-		i--
-		b[i] = byte('0' + n%10)
-		n /= 10
-	}
-	if neg {
-		i--
-		b[i] = '-'
-	}
-	return string(b[i:])
 }
 
 // decryptE2E decrypts a 7-chunk E2E value using the vector private key and
@@ -346,16 +335,11 @@ func TestClient_Send_BackwardCompatible_NoDeviceID(t *testing.T) {
 		t.Fatal("no device listing lookup must happen without a DeviceID")
 	}
 
-	var sent struct {
-		IsEncrypted bool   `json:"isEncrypted"`
-		Text        string `json:"text"`
-	}
 	// Note: TextMessage is a nested object, so decode into the raw map path.
 	var raw map[string]any
 	if err := json.Unmarshal([]byte(mock.postBody), &raw); err != nil {
 		t.Fatalf("unmarshal posted body: %v", err)
 	}
-	_ = sent
 	if raw["isEncrypted"] == true {
 		t.Fatal("message without DeviceID must remain plaintext")
 	}
@@ -433,6 +417,91 @@ func TestClient_Send_DeviceNotFound(t *testing.T) {
 	_, err := client.Send(context.Background(), message, smsgateway.WithE2EEncryption(true))
 	if !errors.Is(err, smsgateway.ErrDeviceNotFound) {
 		t.Fatalf("Send error = %v, want ErrDeviceNotFound", err)
+	}
+}
+
+func TestClient_Send_AutoMode_DeviceListingError(t *testing.T) {
+	mock := &e2eMock{devicesCode: http.StatusInternalServerError, postCode: http.StatusCreated, stateBody: `{}`}
+	client := newE2EMockEnc(t, mock, smsgateway.NewEncryptor())
+
+	message := smsgateway.Message{
+		DeviceID:     "dev-123",
+		TextMessage:  &smsgateway.TextMessage{Text: "Hello"},
+		PhoneNumbers: []string{"+1234567890"},
+	}
+
+	// In auto mode only ErrDeviceNotFound falls back to plaintext: a
+	// device-listing transport/5xx error must propagate and prevent the send.
+	_, err := client.Send(context.Background(), message)
+	if err == nil {
+		t.Fatal("device-listing failure must fail the send in auto mode")
+	}
+	if mock.postCall != 0 {
+		t.Fatal("no request must be sent when the device listing fails")
+	}
+}
+
+func TestClient_Send_DoesNotMutateCallerMessage(t *testing.T) {
+	mock := &e2eMock{devices: keyedDeviceJSON(t, "dev-123", 1), postCode: http.StatusCreated, stateBody: `{}`}
+	client := newE2EMockEnc(t, mock, smsgateway.NewEncryptor())
+
+	message := smsgateway.Message{
+		DeviceID:     "dev-123",
+		TextMessage:  &smsgateway.TextMessage{Text: "Hello World"},
+		PhoneNumbers: []string{"+1234567890"},
+	}
+
+	if _, err := client.Send(context.Background(), message); err != nil {
+		t.Fatalf("Send 1: %v", err)
+	}
+
+	// Send must not write ciphertext through the caller's pointers or slice:
+	// the same value must stay re-sendable and plaintext on the caller side.
+	if message.TextMessage.Text != "Hello World" {
+		t.Fatalf("caller TextMessage mutated to %q", message.TextMessage.Text)
+	}
+	if message.PhoneNumbers[0] != "+1234567890" {
+		t.Fatalf("caller PhoneNumbers mutated to %v", message.PhoneNumbers)
+	}
+	if message.IsEncrypted {
+		t.Fatal("caller IsEncrypted must not be set by Send")
+	}
+
+	if _, err := client.Send(context.Background(), message); err != nil {
+		t.Fatalf("Send 2 with the same value: %v", err)
+	}
+	assertEncryptedWithKeyVersion(t, mock, 1)
+}
+
+func TestClient_Send_CacheAllDevicesFromListing(t *testing.T) {
+	d1 := strings.TrimSuffix(keyedDeviceJSON(t, "dev-1", 1), "]")
+	d2 := strings.TrimPrefix(keyedDeviceJSON(t, "dev-2", 2), "[")
+	mock := &e2eMock{devices: d1 + "," + d2, postCode: http.StatusCreated, stateBody: `{}`}
+	client := newE2EMockEnc(t, mock, smsgateway.NewEncryptor())
+
+	send := func(deviceID string) {
+		t.Helper()
+		message := smsgateway.Message{
+			DeviceID:     deviceID,
+			TextMessage:  &smsgateway.TextMessage{Text: "Hello"},
+			PhoneNumbers: []string{"+1234567890"},
+		}
+		if _, err := client.Send(context.Background(), message); err != nil {
+			t.Fatalf("Send to %s: %v", deviceID, err)
+		}
+	}
+
+	send("dev-1")
+	send("dev-2")
+	send("dev-1")
+
+	mock.mu.Lock()
+	defer mock.mu.Unlock()
+	if mock.listDevicesCall != 1 {
+		t.Fatalf(
+			"one listing must populate the cache for every returned device, listing calls = %d",
+			mock.listDevicesCall,
+		)
 	}
 }
 
@@ -697,7 +766,9 @@ func TestClient_GetState_EchoesEncryptedPhone(t *testing.T) {
 	}
 
 	// The server stores the encrypted phone verbatim and returns it in status.
+	mock.mu.Lock()
 	mock.stateBody = `{"id":"msg-1","deviceId":"dev-123","state":"Processed","isEncrypted":true,"recipients":[{"phoneNumber":"` + encryptedPhone + `","state":"Processed"}]}`
+	mock.mu.Unlock()
 
 	state, err := client.GetState(context.Background(), "msg-1")
 	if err != nil {
@@ -798,7 +869,11 @@ func assertEncryptedWithKeyVersion(t *testing.T, mock *e2eMock, version int) {
 
 	want := fmt.Sprintf("$rsa-oaep-aes-256-gcm$v=1$k=%d$", version)
 	if !strings.HasPrefix(sent.TextMessage.Text, want) {
-		t.Fatalf("message must be encrypted with keyVersion %d, got %q", version, sent.TextMessage.Text[:40])
+		got := sent.TextMessage.Text
+		if len(got) > 40 {
+			got = got[:40]
+		}
+		t.Fatalf("message must be encrypted with keyVersion %d, got %q", version, got)
 	}
 }
 

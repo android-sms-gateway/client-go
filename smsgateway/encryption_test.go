@@ -1,6 +1,7 @@
 package smsgateway_test
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/ecdsa"
@@ -22,7 +23,7 @@ import (
 	"github.com/android-sms-gateway/client-go/smsgateway"
 )
 
-const vectorPath = "../../docs/plan/e2e-encryption/test-vectors/e2e-vector-v1.json"
+const vectorPath = "../test/e2e-vector-v1.json"
 
 // vectorTestHelper is the subset of [testing.TB] used by the vector helpers so
 // both test and benchmark cases can use them (benchmarks in
@@ -198,7 +199,7 @@ func TestEncryptorVectorFullFormat(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RSA-OAEP decrypt chunk 4: %v", err)
 	}
-	if !bytesEqual(gotKey, aesKey) {
+	if !bytes.Equal(gotKey, aesKey) {
 		t.Fatalf("chunk 4 decrypts to %x, want %x", gotKey, aesKey)
 	}
 
@@ -242,7 +243,7 @@ func TestVectorChunk4DecryptsToAesKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RSA-OAEP decrypt vector chunk4: %v", err)
 	}
-	if !bytesEqual(got, aesKey) {
+	if !bytes.Equal(got, aesKey) {
 		t.Fatalf("vector chunk4 decrypts to %x, want %x", got, aesKey)
 	}
 }
@@ -365,18 +366,6 @@ func TestEncryptorDistinctIVs(t *testing.T) {
 	}
 }
 
-func bytesEqual(a, b []byte) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
-}
-
 // MessageEncryptor owns key retrieval: missing or unusable key material on the
 // resolved Device must be validated inside Encrypt, before any material is
 // generated.
@@ -426,5 +415,49 @@ func TestMessageEncryptor_Encrypt_KeyNegative(t *testing.T) {
 	nonRSA.PublicKey = &nonRSAKey
 	if _, err = e.Encrypt(nonRSA, "secret"); !errors.Is(err, smsgateway.ErrE2ENotConfigured) {
 		t.Fatalf("non-RSA key error = %v, want ErrE2ENotConfigured", err)
+	}
+
+	// RSA key with a non-2048 modulus (1024-bit) => ErrE2ENotConfigured: the
+	// wire format and the 512-char phone limit assume an RSA-2048 key.
+	smallKey, err := rsa.GenerateKey(rand.Reader, 1024)
+	if err != nil {
+		t.Fatalf("generate 1024-bit RSA key: %v", err)
+	}
+	smallDer, err := x509.MarshalPKIXPublicKey(&smallKey.PublicKey)
+	if err != nil {
+		t.Fatalf("marshal 1024-bit RSA public key: %v", err)
+	}
+	wrongSize := vectorDevice(t, v, 1)
+	wrongSizeKey := base64.StdEncoding.EncodeToString(smallDer)
+	wrongSize.PublicKey = &wrongSizeKey
+	if _, err = e.Encrypt(wrongSize, "secret"); !errors.Is(err, smsgateway.ErrE2ENotConfigured) {
+		t.Fatalf("non-2048-bit RSA key error = %v, want ErrE2ENotConfigured", err)
+	}
+}
+
+// Pinned AES-GCM material with an invalid length must fail explicitly instead
+// of silently falling back to freshly generated CSPRNG bytes.
+func TestMessageEncryptor_PinnedMaterialInvalidLength(t *testing.T) {
+	v := loadVector(t)
+	device := vectorDevice(t, v, v.KeyVersion)
+
+	tests := []struct {
+		name string
+		key  []byte
+		iv   []byte
+	}{
+		{name: "short key", key: make([]byte, 16), iv: make([]byte, 12)},
+		{name: "short iv", key: make([]byte, 32), iv: make([]byte, 8)},
+		{name: "key only", key: make([]byte, 32)},
+		{name: "iv only", iv: make([]byte, 12)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := smsgateway.NewEncryptor(smsgateway.WithEncryptionMaterial(tt.key, tt.iv))
+			_, err := e.Encrypt(device, "secret")
+			if !errors.Is(err, smsgateway.ErrInvalidEncryptionMaterial) {
+				t.Fatalf("Encrypt error = %v, want ErrInvalidEncryptionMaterial", err)
+			}
+		})
 	}
 }

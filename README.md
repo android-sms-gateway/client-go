@@ -145,6 +145,11 @@ from the device listing, and the encryptor encrypts the body and every phone
 number with hybrid RSA-OAEP (SHA-256) + AES-256-GCM and marks the message with
 `IsEncrypted`.
 
+Resolved device entries are cached per `deviceId` for 60 seconds by default, so
+repeated sends do not refetch the device listing. Use `Config.WithDeviceCacheTTL`
+to change the window. After a device rotates its key, sends continue to use the
+previous `keyVersion` until the cache entry expires.
+
 ```go
 state, err := client.Send(ctx, smsgateway.Message{
     DeviceID:     "PyDmBQZZXYmyxMwED8Fzy",

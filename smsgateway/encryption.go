@@ -32,6 +32,7 @@ const (
 	ivLen            = 12  // bytes (GCM nonce)
 	gcmTagLen        = 16  // bytes (128 bits)
 	rsaCiphertextLen = 256 // bytes (RSA-2048 modulus)
+	rsaKeyBits       = 2048
 )
 
 // Encryptor produces E2E-encrypted values for the resolved target [Device].
@@ -154,9 +155,17 @@ func (e *MessageEncryptor) Encrypt(device Device, plaintext string) (string, err
 
 // material returns the AES key and IV for this encryption. Test-pinned
 // material wins; otherwise fresh CSPRNG bytes are generated (32-byte key,
-// 12-byte IV - never 12 bytes for the key).
+// 12-byte IV - never 12 bytes for the key). Pinned material with an invalid
+// length fails explicitly instead of silently falling back to fresh bytes.
 func (e *MessageEncryptor) material() ([]byte, []byte, error) {
-	if len(e.aesKey) == aesKeyLen && len(e.iv) == ivLen {
+	if len(e.aesKey) > 0 || len(e.iv) > 0 {
+		if len(e.aesKey) != aesKeyLen || len(e.iv) != ivLen {
+			return nil, nil, fmt.Errorf(
+				"%w: pinned encryption material must be a %d-byte key and a %d-byte IV, got %d and %d",
+				ErrInvalidEncryptionMaterial, aesKeyLen, ivLen, len(e.aesKey), len(e.iv),
+			)
+		}
+
 		return e.aesKey, e.iv, nil
 	}
 
@@ -207,6 +216,12 @@ func parsePublicKey(publicKeyBase64 string) (*rsa.PublicKey, error) {
 	rsaPub, ok := pub.(*rsa.PublicKey)
 	if !ok {
 		return nil, fmt.Errorf("%w: public key is not an RSA key", ErrE2ENotConfigured)
+	}
+
+	// The wire format and the server-side phone-number limit (max=512) assume
+	// an RSA-2048 modulus: a larger key would overflow the encoded length.
+	if rsaPub.N.BitLen() != rsaKeyBits {
+		return nil, fmt.Errorf("%w: RSA key size must be 2048 bits, got %d", ErrE2ENotConfigured, rsaPub.N.BitLen())
 	}
 
 	return rsaPub, nil

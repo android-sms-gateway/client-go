@@ -148,7 +148,10 @@ func (c *Client) applyE2E(ctx context.Context, message *Message, opts *SendOptio
 
 // encryptMessage encrypts the message body and each phone number with the
 // device's E2E key. The body and every phone number get their own fresh AES
-// key and 12-byte IV; the body itself is never double-encrypted.
+// key and 12-byte IV; the body itself is never double-encrypted. Ciphertext is
+// produced into copies first and committed to the message only after every
+// encryption succeeds, so the caller's Message data is never mutated and can
+// never be left partially encrypted.
 //
 // In auto mode (!required) an [ErrE2ENotConfigured] from the encryptor (unkeyed
 // or non-RSA device) falls back to plaintext, leaving the message untouched;
@@ -158,7 +161,7 @@ func (c *Client) encryptMessage(required bool, device Device, message *Message) 
 		return c.encryptor.Encrypt(device, value)
 	}
 
-	err := encryptMessageContent(encrypt, message)
+	content, err := encryptMessageContent(encrypt, message)
 	if err != nil {
 		if !required && errors.Is(err, ErrE2ENotConfigured) {
 			return nil
@@ -167,9 +170,9 @@ func (c *Client) encryptMessage(required bool, device Device, message *Message) 
 		return fmt.Errorf("failed to encrypt message: %w", err)
 	}
 
+	phones := make([]string, len(message.PhoneNumbers))
 	for i, phone := range message.PhoneNumbers {
-		var encrypted string
-		encrypted, err = encrypt(phone)
+		phones[i], err = encrypt(phone)
 		if err != nil {
 			if !required && errors.Is(err, ErrE2ENotConfigured) {
 				return nil
@@ -177,47 +180,43 @@ func (c *Client) encryptMessage(required bool, device Device, message *Message) 
 
 			return fmt.Errorf("failed to encrypt phone number: %w", err)
 		}
-
-		message.PhoneNumbers[i] = encrypted
 	}
 
+	// Commit only after every field succeeded, and never through the caller's
+	// pointers or slice.
+	switch {
+	case message.TextMessage != nil:
+		message.TextMessage = &TextMessage{Text: content}
+	case message.DataMessage != nil:
+		message.DataMessage = &DataMessage{Data: content, Port: message.DataMessage.Port}
+	case message.Message != "":
+		message.Message = content
+	}
+	message.PhoneNumbers = phones
 	message.IsEncrypted = true
 
 	return nil
 }
 
-// encryptMessageContent encrypts whichever content field is set, leaving the
-// others untouched. The field is committed only on success so a
-// key-extraction error cannot overwrite the caller's body.
-func encryptMessageContent(encrypt func(string) (string, error), message *Message) error {
+// encryptMessageContent returns the encrypted value of whichever content field
+// is set. It does not mutate the message.
+func encryptMessageContent(encrypt func(string) (string, error), message *Message) (string, error) {
 	switch {
 	case message.TextMessage != nil:
-		encrypted, err := encrypt(message.TextMessage.Text)
-		if err != nil {
-			return err
-		}
-		message.TextMessage.Text = encrypted
+		return encrypt(message.TextMessage.Text)
 	case message.DataMessage != nil:
-		encrypted, err := encrypt(message.DataMessage.Data)
-		if err != nil {
-			return err
-		}
-		message.DataMessage.Data = encrypted
+		return encrypt(message.DataMessage.Data)
 	case message.Message != "":
-		encrypted, err := encrypt(message.Message)
-		if err != nil {
-			return err
-		}
-		message.Message = encrypted
+		return encrypt(message.Message)
 	}
 
-	return nil
+	return "", nil
 }
 
 // resolveDevice returns the device listing entry for the given deviceId,
-// caching it per deviceId so repeated sends do not refetch the listing.
-// Entries expire after deviceCacheTTL (default 60s, matching the TS SDK);
-// expired entries are treated as misses and re-fetch the listing.
+// caching the whole listing so repeated sends to any listed device do not
+// refetch /devices. Entries expire after deviceCacheTTL (default 60s, matching
+// the TS SDK); expired entries are treated as misses and re-fetch the listing.
 func (c *Client) resolveDevice(ctx context.Context, deviceID string) (Device, error) {
 	c.deviceCacheMu.Lock()
 	if entry, ok := c.deviceCache[deviceID]; ok && time.Since(entry.fetchedAt) < c.deviceCacheTTL {
@@ -232,16 +231,23 @@ func (c *Client) resolveDevice(ctx context.Context, deviceID string) (Device, er
 		return Device{}, err
 	}
 
+	now := time.Now()
+	var (
+		found  Device
+		exists bool
+	)
+
+	c.deviceCacheMu.Lock()
 	for _, device := range devices {
-		if device.ID != deviceID {
-			continue
+		c.deviceCache[device.ID] = cachedDevice{device: device, fetchedAt: now}
+		if device.ID == deviceID {
+			found, exists = device, true
 		}
+	}
+	c.deviceCacheMu.Unlock()
 
-		c.deviceCacheMu.Lock()
-		c.deviceCache[deviceID] = cachedDevice{device: device, fetchedAt: time.Now()}
-		c.deviceCacheMu.Unlock()
-
-		return device, nil
+	if exists {
+		return found, nil
 	}
 
 	return Device{}, ErrDeviceNotFound

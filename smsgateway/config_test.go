@@ -3,6 +3,7 @@ package smsgateway_test
 import (
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/android-sms-gateway/client-go/smsgateway"
 )
@@ -230,6 +231,23 @@ func TestConfig_Validate(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestConfig_WithDeviceCacheTTL(t *testing.T) {
+	config := smsgateway.Config{}
+	result := config.WithDeviceCacheTTL(30 * time.Second)
+	if result.DeviceCacheTTL != 30*time.Second {
+		t.Errorf("WithDeviceCacheTTL() = %v, want 30s", result.DeviceCacheTTL)
+	}
+}
+
+func TestConfig_WithEncryptor(t *testing.T) {
+	enc := stubEncryptor{value: "fixed"}
+	config := smsgateway.Config{}
+	result := config.WithEncryptor(enc)
+	if result.Encryptor != enc {
+		t.Errorf("WithEncryptor() encryptor = %v, want %v", result.Encryptor, enc)
 	}
 }
 

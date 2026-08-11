@@ -21,4 +21,8 @@ var (
 	// ErrDeviceNotFound is returned when a message targets a device that does
 	// not exist in the device listing.
 	ErrDeviceNotFound = errors.New("device not found")
+
+	// ErrInvalidEncryptionMaterial is returned when pinned AES-GCM encryption
+	// material does not have the exact key/IV lengths required by the scheme.
+	ErrInvalidEncryptionMaterial = errors.New("invalid encryption material")
 )

@@ -136,9 +136,18 @@ func BenchmarkE2EDecryptBatch100(b *testing.B) {
 			b.Fatalf("Encrypt: %v", err)
 		}
 		chunks := strings.Split(value, "$")
-		encKey, _ := base64.StdEncoding.DecodeString(chunks[4])
-		iv, _ := base64.StdEncoding.DecodeString(chunks[5])
-		ctTag, _ := base64.StdEncoding.DecodeString(chunks[6])
+		encKey, err := base64.StdEncoding.DecodeString(chunks[4])
+		if err != nil {
+			b.Fatalf("decode chunk 4: %v", err)
+		}
+		iv, err := base64.StdEncoding.DecodeString(chunks[5])
+		if err != nil {
+			b.Fatalf("decode chunk 5: %v", err)
+		}
+		ctTag, err := base64.StdEncoding.DecodeString(chunks[6])
+		if err != nil {
+			b.Fatalf("decode chunk 6: %v", err)
+		}
 		values[i] = sealed{encKey: encKey, iv: iv, ctTag: ctTag}
 	}
 
