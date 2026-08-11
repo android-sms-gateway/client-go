@@ -32,6 +32,7 @@
 
 <!-- TABLE OF CONTENTS -->
 - [About The Project](#about-the-project)
+- [Features](#features)
 - [Built With](#built-with)
 - [Getting Started](#getting-started)
 	- [Prerequisites](#prerequisites)
@@ -39,11 +40,17 @@
 - [Usage](#usage)
 	- [SMSGate client (`smsgateway`)](#smsgate-client-smsgateway)
 	- [Certificate Authority client (`ca`)](#certificate-authority-client-ca)
+	- [Error handling](#error-handling)
+- [Configuration](#configuration)
+	- [`smsgateway` client](#smsgateway-client)
+	- [`ca` client](#ca-client)
 - [API Coverage](#api-coverage)
 	- [`smsgateway.Client`](#smsgatewayclient)
 	- [`ca.Client`](#caclient)
 - [Contributing](#contributing)
 - [License](#license)
+- [Contact](#contact)
+- [Acknowledgments](#acknowledgments)
 
 
 <!-- ABOUT THE PROJECT -->
@@ -56,6 +63,22 @@
 - Shared low-level HTTP handling in the `rest` package.
 
 The library supports both Basic authentication (`user` + `password`) and Bearer token authentication for the SMSGate client.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+## Features
+
+- Send SMS as text or binary data with optional delivery reports, priority, scheduling, TTL, and SIM selection
+- Track messages through their lifecycle: get state, cancel pending messages, and list messages with filters and pagination
+- Read the incoming message inbox and request an inbox refresh
+- Manage registered devices, check service health, and fetch delivery logs
+- Read and update device settings, either partially or with a full replace
+- Register, list, and delete webhooks
+- Full token lifecycle: generate, refresh, and revoke access tokens
+- Submit Certificate Signing Requests and track their status via the CA client
+- Authenticate with Basic credentials or a Bearer token
+- Classify API errors as client, server, bad request, or conflict via `errors.Is`-compatible sentinel errors
+- Zero runtime dependencies — standard library only
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -149,16 +172,80 @@ func main() {
 }
 ```
 
+### Error handling
+
+The `rest` package exposes sentinel errors that you can match with `errors.Is` or the provided helpers:
+
+- `rest.ErrAPIError` — base API error; `rest.IsAPIError` for any API failure
+- `rest.ErrClient` / `rest.IsClientError` — 4xx client errors
+- `rest.ErrServer` / `rest.IsServerError` — 5xx server errors
+- `rest.ErrBadRequest` / `rest.IsBadRequest` — 400 validation failures
+- `rest.ErrConflict` / `rest.IsConflict` — 409 conflicts
+
+```go
+state, err := client.Send(ctx, smsgateway.Message{
+	TextMessage:  &smsgateway.TextMessage{Text: "Hello from Go"},
+	PhoneNumbers: []string{"+15555550100"},
+})
+if err != nil {
+	switch {
+	case rest.IsBadRequest(err):
+		log.Fatal("invalid message payload:", err)
+	case rest.IsServerError(err):
+		log.Fatal("SMSGate API unavailable:", err)
+	default:
+		log.Fatal("failed to send message:", err)
+	}
+}
+```
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+## Configuration
+
+### `smsgateway` client
+
+| Field      | Type           | Description                                                      |
+| ---------- | -------------- | ---------------------------------------------------------------- |
+| `User`     | `string`       | Basic Auth username                                              |
+| `Password` | `string`       | Basic Auth password                                              |
+| `Token`    | `string`       | Bearer token; takes priority over Basic Auth when both are set   |
+| `BaseURL`  | `string`       | API base URL; defaults to `https://api.sms-gate.app/3rdparty/v1` |
+| `Client`   | `*http.Client` | Optional custom HTTP client; defaults to `http.DefaultClient`    |
+
+The config also provides chainable builder methods: `WithBasicAuth`, `WithJWTAuth`, `WithBaseURL`, and `WithClient`. Call `Config.Validate()` to check that credentials are present.
+
+```go
+config := smsgateway.Config{}.
+	WithBasicAuth(os.Getenv("ASG_USERNAME"), os.Getenv("ASG_PASSWORD")).
+	WithClient(&http.Client{Timeout: 30 * time.Second})
+
+client := smsgateway.NewClient(config)
+```
+
+### `ca` client
+
+The `ca` client is configured with functional options:
+
+| Option        | Description                                               |
+| ------------- | --------------------------------------------------------- |
+| `WithClient`  | Custom HTTP client; defaults to `http.DefaultClient`      |
+| `WithBaseURL` | CA base URL; defaults to `https://ca.sms-gate.app/api/v1` |
+
+```go
+client := ca.NewClient(ca.WithBaseURL("https://ca.sms-gate.app/api/v1"))
+```
+
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## API Coverage
 
 ### `smsgateway.Client`
 
-- Messages: `Send`, `GetState`
+- Messages: `Send`, `CancelMessage`, `GetState`, `ListMessages`
+- Inbox: `ListInboxMessages`, `RefreshInbox` (replaces deprecated `ExportInbox`)
 - Devices: `ListDevices`, `DeleteDevice`
 - Health: `CheckHealth`
-- Inbox export: `ExportInbox`
 - Logs: `GetLogs`
 - Settings: `GetSettings`, `UpdateSettings`, `ReplaceSettings`
 - Webhooks: `ListWebhooks`, `RegisterWebhook`, `DeleteWebhook`
@@ -189,6 +276,24 @@ Contributions are welcome. Please open an issue to discuss major changes before 
 ## License
 
 Distributed under the Apache-2.0 License. See [`LICENSE`](LICENSE) for details.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+<!-- CONTACT -->
+## Contact
+
+Web-site: [https://sms-gate.app/](https://sms-gate.app/)
+Documentation: [https://docs.sms-gate.app/](https://docs.sms-gate.app/)
+Android App: [https://github.com/capcom6/android-sms-gateway](https://github.com/capcom6/android-sms-gateway)
+Repository: [https://github.com/android-sms-gateway/client-go](https://github.com/android-sms-gateway/client-go)
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+<!-- ACKNOWLEDGMENTS -->
+## Acknowledgments
+
+- [Best-README-Template](https://github.com/othneildrew/Best-README-Template) — README structure
+- [Go](https://go.dev/) — programming language
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
