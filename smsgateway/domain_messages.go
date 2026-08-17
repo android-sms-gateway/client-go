@@ -89,8 +89,8 @@ type Message struct {
 	TextMessage *TextMessage `json:"textMessage,omitempty" validate:"omitempty"` // Text message
 	DataMessage *DataMessage `json:"dataMessage,omitempty" validate:"omitempty"` // Data message
 
-	PhoneNumbers []string `json:"phoneNumbers"          example:"79990001234" validate:"required,min=1,max=100,dive,required,min=1,max=128"` // Recipients (phone numbers)
-	IsEncrypted  bool     `json:"isEncrypted,omitempty" example:"true"`                                                                      // Is encrypted
+	PhoneNumbers []string `json:"phoneNumbers"          example:"79990001234" validate:"required,min=1,max=100,unique,dive,required,min=1,max=128"` // Recipients (phone numbers)
+	IsEncrypted  bool     `json:"isEncrypted,omitempty" example:"true"`                                                                             // Is encrypted
 
 	SimNumber          *uint8          `json:"simNumber,omitempty"          example:"1"    validate:"omitempty,min=1,max=3"`                  // SIM card number (1-3), if not set - default SIM will be used
 	WithDeliveryReport *bool           `json:"withDeliveryReport,omitempty" example:"true"`                                                   // With delivery report
