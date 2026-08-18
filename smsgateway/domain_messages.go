@@ -89,7 +89,7 @@ type Message struct {
 	TextMessage *TextMessage `json:"textMessage,omitempty" validate:"omitempty"` // Text message
 	DataMessage *DataMessage `json:"dataMessage,omitempty" validate:"omitempty"` // Data message
 
-	PhoneNumbers []string `json:"phoneNumbers"          example:"79990001234" validate:"required,min=1,max=100,dive,required,min=1,max=128"` // Recipients (phone numbers)
+	PhoneNumbers []string `json:"phoneNumbers"          example:"79990001234" validate:"required,min=1,max=100,dive,required,min=1,max=512"` // Recipients (phone numbers)
 	IsEncrypted  bool     `json:"isEncrypted,omitempty" example:"true"`                                                                      // Is encrypted
 
 	SimNumber          *uint8          `json:"simNumber,omitempty"          example:"1"    validate:"omitempty,min=1,max=3"`                  // SIM card number (1-3), if not set - default SIM will be used
@@ -194,7 +194,7 @@ func (m MessageState) Validate() error {
 // between the client and the server. It contains the phone number or first 16
 // symbols of the SHA256 hash, state, and error information.
 type RecipientState struct {
-	PhoneNumber string          `json:"phoneNumber"     validate:"required,min=1,max=128" example:"79990001234"` // Phone number or first 16 symbols of SHA256 hash
+	PhoneNumber string          `json:"phoneNumber"     validate:"required,min=1,max=512" example:"79990001234"` // Phone number or first 16 symbols of SHA256 hash
 	State       ProcessingState `json:"state"           validate:"required"               example:"Pending"`     // State
 	Error       *string         `json:"error,omitempty"                                   example:"timeout"`     // Error (for `Failed` state)
 }
