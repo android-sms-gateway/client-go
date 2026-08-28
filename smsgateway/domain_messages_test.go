@@ -1,7 +1,10 @@
 package smsgateway_test
 
 import (
+	"encoding/json"
 	"errors"
+	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -113,6 +116,61 @@ func TestMessage_GetDataMessage(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestMessage_GetMmsMessage(t *testing.T) {
+	tests := []struct {
+		name        string
+		message     smsgateway.Message
+		expectedMms *smsgateway.MmsMessage
+	}{
+		{
+			name: "MmsMessage field set",
+			message: smsgateway.Message{
+				MmsMessage: &smsgateway.MmsMessage{
+					Text: ptr("World"),
+				},
+				PhoneNumbers: []string{"1234567890"},
+			},
+			expectedMms: &smsgateway.MmsMessage{
+				Text: ptr("World"),
+			},
+		},
+		{
+			name: "MmsMessage field not set",
+			message: smsgateway.Message{
+				PhoneNumbers: []string{"1234567890"},
+			},
+			expectedMms: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.message.GetMmsMessage()
+
+			if result == nil && tt.expectedMms != nil {
+				t.Errorf("GetMmsMessage() = nil, expected %v", tt.expectedMms)
+			}
+
+			if result != nil && tt.expectedMms == nil {
+				t.Errorf("GetMmsMessage() = %v, expected nil", result)
+				return
+			}
+
+			if result != nil && tt.expectedMms != nil && !reflect.DeepEqual(result, tt.expectedMms) {
+				t.Errorf("GetMmsMessage() = %v, expected %v", result, tt.expectedMms)
+			}
+		})
+	}
+}
+
+func TestMmsMessage_Validate_NilReceiver(t *testing.T) {
+	var m *smsgateway.MmsMessage
+
+	if err := m.Validate(); err == nil {
+		t.Errorf("Validate() error = nil, expected error for nil receiver")
 	}
 }
 
@@ -301,6 +359,224 @@ func TestMessage_Validate(t *testing.T) {
 				PhoneNumbers: []string{"1234567890"},
 			},
 			err: smsgateway.ErrValidationFailed,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.message.Validate()
+
+			if tt.err == nil {
+				if err != nil {
+					t.Errorf("Validate() error = %v, expected no error", err)
+				}
+			} else {
+				if err == nil {
+					t.Errorf("Validate() error = nil, expected error")
+					return
+				}
+				if !errors.Is(err, tt.err) {
+					t.Errorf("Validate() error = %v, want %v", err, tt.err)
+				}
+			}
+		})
+	}
+}
+
+func TestMmsMessage_MarshalFixture(t *testing.T) {
+	mms := smsgateway.MmsMessage{
+		Subject: ptr("Hello"),
+		Text:    ptr("World"),
+		Attachments: []smsgateway.MmsAttachment{
+			{
+				ContentType: "image/png",
+				Name:        ptr("picture.png"),
+				Data:        "BASE64DATA",
+			},
+		},
+	}
+
+	expected := `{"subject":"Hello","text":"World","attachments":[{"contentType":"image/png","name":"picture.png","data":"BASE64DATA"}]}`
+
+	got, err := json.Marshal(mms)
+	if err != nil {
+		t.Fatalf("Marshal() error = %v", err)
+	}
+
+	if string(got) != expected {
+		t.Errorf("Marshal() = %s, want %s", got, expected)
+	}
+}
+
+func TestMmsMessage_MarshalOmitEmptyAttachments(t *testing.T) {
+	mms := smsgateway.MmsMessage{
+		Subject: ptr("Hello"),
+		Text:    ptr("World"),
+	}
+
+	got, err := json.Marshal(mms)
+	if err != nil {
+		t.Fatalf("Marshal() error = %v", err)
+	}
+
+	if strings.Contains(string(got), "attachments") {
+		t.Errorf("Marshal() = %s, should not contain \"attachments\" key", got)
+	}
+
+	expected := `{"subject":"Hello","text":"World"}`
+	if string(got) != expected {
+		t.Errorf("Marshal() = %s, want %s", got, expected)
+	}
+}
+
+func TestMmsMessage_RoundTrip(t *testing.T) {
+	original := smsgateway.MmsMessage{
+		Subject: ptr("Hello"),
+		Text:    ptr("World"),
+		Attachments: []smsgateway.MmsAttachment{
+			{
+				ContentType: "image/png",
+				Name:        ptr("picture.png"),
+				Data:        "BASE64DATA",
+			},
+		},
+	}
+
+	data, err := json.Marshal(original)
+	if err != nil {
+		t.Fatalf("Marshal() error = %v", err)
+	}
+
+	var decoded smsgateway.MmsMessage
+	if uerr := json.Unmarshal(data, &decoded); uerr != nil {
+		t.Fatalf("Unmarshal() error = %v", uerr)
+	}
+
+	if !reflect.DeepEqual(original, decoded) {
+		t.Errorf("RoundTrip() = %+v, want %+v", decoded, original)
+	}
+}
+
+func TestMmsMessage_Validate(t *testing.T) {
+	tests := []struct {
+		name    string
+		message smsgateway.MmsMessage
+		wantErr bool
+	}{
+		{
+			name: "Valid - text set",
+			message: smsgateway.MmsMessage{
+				Text: ptr("World"),
+			},
+			wantErr: false,
+		},
+		{
+			name: "Valid - one attachment",
+			message: smsgateway.MmsMessage{
+				Attachments: []smsgateway.MmsAttachment{
+					{ContentType: "image/png", Data: "BASE64DATA"},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Invalid - neither text nor attachments",
+			message: smsgateway.MmsMessage{
+				Subject: ptr("Hello"),
+			},
+			wantErr: true,
+		},
+		{
+			name: "Valid - attachment missing contentType (tag-based, server-side)",
+			message: smsgateway.MmsMessage{
+				Attachments: []smsgateway.MmsAttachment{
+					{Data: "BASE64DATA"},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Valid - attachment missing data (tag-based, server-side)",
+			message: smsgateway.MmsMessage{
+				Attachments: []smsgateway.MmsAttachment{
+					{ContentType: "image/png"},
+				},
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.message.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestMessage_Validate_MmsMessage(t *testing.T) {
+	tests := []struct {
+		name    string
+		message smsgateway.Message
+		err     error
+	}{
+		{
+			name: "Valid - only MmsMessage (text)",
+			message: smsgateway.Message{
+				MmsMessage: &smsgateway.MmsMessage{
+					Text: ptr("World"),
+				},
+				PhoneNumbers: []string{"1234567890"},
+			},
+			err: nil,
+		},
+		{
+			name: "Valid - only MmsMessage (attachment)",
+			message: smsgateway.Message{
+				MmsMessage: &smsgateway.MmsMessage{
+					Attachments: []smsgateway.MmsAttachment{
+						{ContentType: "image/png", Data: "BASE64DATA"},
+					},
+				},
+				PhoneNumbers: []string{"1234567890"},
+			},
+			err: nil,
+		},
+		{
+			name: "Invalid - MmsMessage with neither text nor attachments",
+			message: smsgateway.Message{
+				MmsMessage: &smsgateway.MmsMessage{
+					Subject: ptr("Hello"),
+				},
+				PhoneNumbers: []string{"1234567890"},
+			},
+			err: smsgateway.ErrValidationFailed,
+		},
+		{
+			name: "Invalid - MmsMessage combined with TextMessage",
+			message: smsgateway.Message{
+				MmsMessage: &smsgateway.MmsMessage{
+					Text: ptr("World"),
+				},
+				TextMessage: &smsgateway.TextMessage{
+					Text: "Hello World!",
+				},
+				PhoneNumbers: []string{"1234567890"},
+			},
+			err: smsgateway.ErrConflictFields,
+		},
+		{
+			name: "Invalid - MmsMessage combined with Message",
+			message: smsgateway.Message{
+				MmsMessage: &smsgateway.MmsMessage{
+					Text: ptr("World"),
+				},
+				Message:      "Hello World!",
+				PhoneNumbers: []string{"1234567890"},
+			},
+			err: smsgateway.ErrConflictFields,
 		},
 	}
 

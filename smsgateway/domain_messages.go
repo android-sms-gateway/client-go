@@ -66,6 +66,50 @@ type DataMessage struct {
 	Port uint16 `json:"port" validate:"required,min=1,max=65535" example:"53739"`
 }
 
+// MmsAttachment represents a single attachment of an MMS message.
+//
+// ContentType is the MIME type of the attachment (e.g. image/png).
+// Name is the optional file name of the attachment.
+// Data is the base64-encoded attachment content.
+type MmsAttachment struct {
+	// ContentType is the MIME type of the attachment.
+	ContentType string `json:"contentType" validate:"required" example:"image/png"`
+	// Name is the optional file name of the attachment.
+	Name *string `json:"name,omitempty" validate:"omitempty" example:"picture.png"`
+	// Data is the base64-encoded attachment content.
+	Data string `json:"data" validate:"required" example:"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="`
+}
+
+// MmsMessage represents an MMS message with optional subject, text and attachments.
+//
+// Subject is the optional subject of the MMS.
+// Text is the optional text body of the MMS.
+// Attachments is the list of attachments. It is OMITTED entirely when empty/nil.
+type MmsMessage struct {
+	// Subject is the optional subject of the MMS.
+	Subject *string `json:"subject,omitempty" validate:"omitempty" example:"Hello"`
+	// Text is the optional text body of the MMS.
+	Text *string `json:"text,omitempty" validate:"omitempty" example:"World"`
+	// Attachments is the list of attachments. Omitted when empty.
+	Attachments []MmsAttachment `json:"attachments,omitempty" validate:"omitempty,dive"`
+}
+
+// Validate validates the MmsMessage structure.
+func (m *MmsMessage) Validate() error {
+	if m == nil {
+		return fmt.Errorf("%w: mmsMessage is nil", ErrValidationFailed)
+	}
+
+	hasText := m.Text != nil && *m.Text != ""
+	hasAttachments := len(m.Attachments) >= 1
+
+	if !hasText && !hasAttachments {
+		return fmt.Errorf("%w: mmsMessage must specify either text or at least one attachment", ErrValidationFailed)
+	}
+
+	return nil
+}
+
 // Message represents an SMS message.
 //
 // ID is the message ID (if not set - will be generated).
@@ -88,6 +132,7 @@ type Message struct {
 
 	TextMessage *TextMessage `json:"textMessage,omitempty" validate:"omitempty"` // Text message
 	DataMessage *DataMessage `json:"dataMessage,omitempty" validate:"omitempty"` // Data message
+	MmsMessage  *MmsMessage  `json:"mmsMessage,omitempty"  validate:"omitempty"` // MMS message
 
 	PhoneNumbers []string `json:"phoneNumbers"          example:"79990001234" validate:"required,min=1,max=100,unique,dive,required,min=1,max=128"` // Recipients (phone numbers)
 	IsEncrypted  bool     `json:"isEncrypted,omitempty" example:"true"`                                                                             // Is encrypted
@@ -123,12 +168,24 @@ func (m *Message) GetDataMessage() *DataMessage {
 	return m.DataMessage
 }
 
+// GetMmsMessage returns the MmsMessage, if it was set explicitly, or nil otherwise.
+func (m *Message) GetMmsMessage() *MmsMessage {
+	return m.MmsMessage
+}
+
 // Validate validates the Message structure.
 func (m *Message) Validate() error {
 	fields := []bool{
 		m.Message != "",
 		m.TextMessage != nil,
 		m.DataMessage != nil,
+		m.MmsMessage != nil,
+	}
+
+	if m.MmsMessage != nil {
+		if err := m.MmsMessage.Validate(); err != nil {
+			return err
+		}
 	}
 
 	filled := 0
@@ -139,10 +196,16 @@ func (m *Message) Validate() error {
 	}
 
 	if filled == 0 {
-		return fmt.Errorf("%w: must specify exactly one of: textMessage or dataMessage", ErrValidationFailed)
+		return fmt.Errorf(
+			"%w: must specify exactly one of: textMessage, dataMessage or mmsMessage",
+			ErrValidationFailed,
+		)
 	}
 	if filled > 1 {
-		return fmt.Errorf("%w: must specify exactly one of: textMessage or dataMessage", ErrConflictFields)
+		return fmt.Errorf(
+			"%w: must specify exactly one of: textMessage, dataMessage or mmsMessage",
+			ErrConflictFields,
+		)
 	}
 
 	if m.TTL != nil && m.ValidUntil != nil {
@@ -174,6 +237,7 @@ type MessageState struct {
 
 	TextMessage   *TextMessage   `json:"textMessage,omitempty"`   // Present only when `includeContent=true` and the message type is text.
 	DataMessage   *DataMessage   `json:"dataMessage,omitempty"`   // Present only when `includeContent=true` and the message type is data.
+	MmsMessage    *MmsMessage    `json:"mmsMessage,omitempty"`    // Present only when `includeContent=true` and the message type is mms.
 	HashedMessage *HashedMessage `json:"hashedMessage,omitempty"` // Hashed message content, if isHashed is true
 
 }
