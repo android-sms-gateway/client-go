@@ -227,13 +227,14 @@ func (m *Message) Validate() error {
 // of RecipientState, representing the state of each recipient, and a map
 // of states, representing the history of states for the message.
 type MessageState struct {
-	ID          string               `json:"id"          validate:"required,max=36"     example:"PyDmBQZZXYmyxMwED8Fzy"` // Message ID
-	DeviceID    string               `json:"deviceId"    validate:"required,max=21"     example:"PyDmBQZZXYmyxMwED8Fzy"` // Device ID
-	State       ProcessingState      `json:"state"       validate:"required"            example:"Pending"`               // State
-	IsHashed    bool                 `json:"isHashed"                                   example:"false"`                 // Hashed
-	IsEncrypted bool                 `json:"isEncrypted"                                example:"false"`                 // Encrypted
-	Recipients  []RecipientState     `json:"recipients"  validate:"required,min=1,dive"`                                 // Recipients states
-	States      map[string]time.Time `json:"states"`                                                                     // History of states
+	ID          string               `json:"id"          validate:"required,max=36"     example:"PyDmBQZZXYmyxMwED8Fzy"`                    // Message ID
+	DeviceID    string               `json:"deviceId"    validate:"required,max=21"     example:"PyDmBQZZXYmyxMwED8Fzy"`                    // Device ID
+	CreatedAt   time.Time            `json:"createdAt"                                  example:"2020-01-01T00:00:00Z"  format:"date-time"` // Message creation time
+	State       ProcessingState      `json:"state"       validate:"required"            example:"Pending"`                                  // State
+	IsHashed    bool                 `json:"isHashed"                                   example:"false"`                                    // Hashed
+	IsEncrypted bool                 `json:"isEncrypted"                                example:"false"`                                    // Encrypted
+	Recipients  []RecipientState     `json:"recipients"  validate:"required,min=1,dive"`                                                    // Recipients states
+	States      map[string]time.Time `json:"states"`                                                                                        // History of states
 
 	TextMessage   *TextMessage   `json:"textMessage,omitempty"`   // Present only when `includeContent=true` and the message type is text.
 	DataMessage   *DataMessage   `json:"dataMessage,omitempty"`   // Present only when `includeContent=true` and the message type is data.
