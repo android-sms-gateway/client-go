@@ -193,6 +193,8 @@ func (m *Message) ValidUntilTime(now time.Time) *time.Time {
 
 // Validate validates the Message structure.
 func (m *Message) Validate() error {
+	now := time.Now()
+
 	fields := []bool{
 		m.Message != "",
 		m.TextMessage != nil,
@@ -232,6 +234,10 @@ func (m *Message) Validate() error {
 
 	if m.ScheduleAt != nil && !m.ScheduleAt.After(time.Now()) {
 		return fmt.Errorf("%w: scheduleAt must be in the future", ErrValidationFailed)
+	}
+
+	if vu := m.ValidUntilTime(now); m.ScheduleAt != nil && vu != nil && m.ScheduleAt.After(*vu) {
+		return fmt.Errorf("%w: scheduleAt must be before validUntil", ErrValidationFailed)
 	}
 
 	return nil
