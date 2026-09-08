@@ -656,3 +656,181 @@ func TestMessageState_Validate(t *testing.T) {
 		})
 	}
 }
+
+func TestMessage_ValidUntilTime(t *testing.T) {
+	now := time.Date(2025, 6, 15, 12, 0, 0, 0, time.UTC)
+	validUntil := time.Date(2025, 6, 16, 12, 0, 0, 0, time.UTC)
+	zeroTime := time.Time{}
+
+	tests := []struct {
+		name       string
+		message    smsgateway.Message
+		now        time.Time
+		wantNil    bool
+		wantResult *time.Time
+	}{
+		{
+			name:    "nil_fields",
+			message: smsgateway.Message{},
+			now:     now,
+			wantNil: true,
+		},
+		{
+			name:       "valid_until_set",
+			message:    smsgateway.Message{ValidUntil: &validUntil},
+			now:        now,
+			wantResult: &validUntil,
+		},
+		{
+			name:       "ttl_set",
+			message:    smsgateway.Message{TTL: ptr(uint64(100))},
+			now:        now,
+			wantResult: ptr(now.Add(100 * time.Second)),
+		},
+		{
+			name:       "both_set_uses_valid_until",
+			message:    smsgateway.Message{ValidUntil: &validUntil, TTL: ptr(uint64(999))},
+			now:        now,
+			wantResult: &validUntil,
+		},
+		{
+			name:    "valid_until_zero_time",
+			message: smsgateway.Message{ValidUntil: &zeroTime},
+			now:     now,
+			wantNil: true,
+		},
+		{
+			name:       "ttl_zero",
+			message:    smsgateway.Message{TTL: ptr(uint64(0))},
+			now:        now,
+			wantResult: &now,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.message.ValidUntilTime(tt.now)
+
+			if tt.wantNil {
+				if got != nil {
+					t.Errorf("ValidUntilTime() = %v, want nil", got)
+				}
+
+				return
+			}
+
+			if got == nil {
+				t.Fatal("ValidUntilTime() = nil, want non-nil")
+			}
+
+			if !got.Equal(*tt.wantResult) {
+				t.Errorf("ValidUntilTime() = %v, want %v", got, *tt.wantResult)
+			}
+		})
+	}
+}
+
+func TestMessage_Validate_ScheduleAtVsValidUntil(t *testing.T) {
+	textMessage := smsgateway.TextMessage{Text: "Hello World!"}
+	phoneNumbers := []string{"1234567890"}
+
+	newTime := func(v time.Time) *time.Time { return &v }
+	newUint := func(v uint64) *uint64 { return &v }
+
+	tests := []struct {
+		name    string
+		message smsgateway.Message
+		err     error
+	}{
+		{
+			name: "Valid - ScheduleAt before ValidUntil",
+			message: smsgateway.Message{
+				TextMessage:  &textMessage,
+				PhoneNumbers: phoneNumbers,
+				ScheduleAt:   newTime(time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)),
+				ValidUntil:   newTime(time.Date(2099, 1, 2, 0, 0, 0, 0, time.UTC)),
+			},
+			err: nil,
+		},
+		{
+			name: "Valid - ScheduleAt equal to ValidUntil",
+			message: smsgateway.Message{
+				TextMessage:  &textMessage,
+				PhoneNumbers: phoneNumbers,
+				ScheduleAt:   newTime(time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)),
+				ValidUntil:   newTime(time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)),
+			},
+			err: nil,
+		},
+		{
+			name: "Invalid - ScheduleAt after ValidUntil",
+			message: smsgateway.Message{
+				TextMessage:  &textMessage,
+				PhoneNumbers: phoneNumbers,
+				ScheduleAt:   newTime(time.Date(2099, 1, 2, 0, 0, 0, 0, time.UTC)),
+				ValidUntil:   newTime(time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)),
+			},
+			err: smsgateway.ErrValidationFailed,
+		},
+		{
+			name: "Invalid - ScheduleAt future, ValidUntil past",
+			message: smsgateway.Message{
+				TextMessage:  &textMessage,
+				PhoneNumbers: phoneNumbers,
+				ScheduleAt:   newTime(time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)),
+				ValidUntil:   newTime(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)),
+			},
+			err: smsgateway.ErrValidationFailed,
+		},
+		{
+			name: "Valid - ScheduleAt within TTL window",
+			message: smsgateway.Message{
+				TextMessage:  &textMessage,
+				PhoneNumbers: phoneNumbers,
+				ScheduleAt:   newTime(time.Now().Add(30 * time.Minute)),
+				TTL:          newUint(86400),
+			},
+			err: nil,
+		},
+		{
+			name: "Invalid - ScheduleAt beyond TTL window",
+			message: smsgateway.Message{
+				TextMessage:  &textMessage,
+				PhoneNumbers: phoneNumbers,
+				ScheduleAt:   newTime(time.Now().Add(time.Hour)),
+				TTL:          newUint(60),
+			},
+			err: smsgateway.ErrValidationFailed,
+		},
+		{
+			name: "Valid - ScheduleAt with zero ValidUntil",
+			message: smsgateway.Message{
+				TextMessage:  &textMessage,
+				PhoneNumbers: phoneNumbers,
+				ScheduleAt:   newTime(time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)),
+				ValidUntil:   newTime(time.Time{}),
+			},
+			err: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.message.Validate()
+
+			if tt.err == nil {
+				if err != nil {
+					t.Errorf("Validate() error = %v, expected no error", err)
+				}
+			} else {
+				if err == nil {
+					t.Errorf("Validate() error = nil, expected error")
+					return
+				}
+				if !errors.Is(err, tt.err) {
+					t.Errorf("Validate() error = %v, want %v", err, tt.err)
+				}
+			}
+		})
+	}
+}

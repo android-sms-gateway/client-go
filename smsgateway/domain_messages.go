@@ -173,8 +173,28 @@ func (m *Message) GetMmsMessage() *MmsMessage {
 	return m.MmsMessage
 }
 
+// ValidUntilTime returns the time until the message is valid, or nil if not set.
+func (m *Message) ValidUntilTime(now time.Time) *time.Time {
+	var validUntil time.Time
+
+	if m.ValidUntil != nil {
+		validUntil = *m.ValidUntil
+	} else if m.TTL != nil {
+		//nolint:gosec // TTL is seconds, not a security boundary
+		validUntil = now.Add(time.Duration(*m.TTL) * time.Second)
+	}
+
+	if validUntil.IsZero() {
+		return nil
+	}
+
+	return &validUntil
+}
+
 // Validate validates the Message structure.
 func (m *Message) Validate() error {
+	now := time.Now()
+
 	fields := []bool{
 		m.Message != "",
 		m.TextMessage != nil,
@@ -214,6 +234,10 @@ func (m *Message) Validate() error {
 
 	if m.ScheduleAt != nil && !m.ScheduleAt.After(time.Now()) {
 		return fmt.Errorf("%w: scheduleAt must be in the future", ErrValidationFailed)
+	}
+
+	if vu := m.ValidUntilTime(now); m.ScheduleAt != nil && vu != nil && m.ScheduleAt.After(*vu) {
+		return fmt.Errorf("%w: scheduleAt must be before validUntil", ErrValidationFailed)
 	}
 
 	return nil
