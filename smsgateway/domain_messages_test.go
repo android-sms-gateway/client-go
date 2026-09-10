@@ -656,3 +656,100 @@ func TestMessageState_Validate(t *testing.T) {
 		})
 	}
 }
+
+func TestMessage_MarshalPriority_AlwaysEmitted(t *testing.T) {
+	// Priority 0 must always appear in JSON (no omitempty).
+	// This ensures wire parity with Android app which always emits "priority":0.
+	tests := []struct {
+		name     string
+		priority smsgateway.MessagePriority
+		wantJSON string
+	}{
+		{
+			name:     "priority zero",
+			priority: 0,
+			wantJSON: `"priority":0`,
+		},
+		{
+			name:     "priority positive",
+			priority: 42,
+			wantJSON: `"priority":42`,
+		},
+		{
+			name:     "priority negative",
+			priority: -1,
+			wantJSON: `"priority":-1`,
+		},
+		{
+			name:     "priority max",
+			priority: 127,
+			wantJSON: `"priority":127`,
+		},
+		{
+			name:     "priority min",
+			priority: -128,
+			wantJSON: `"priority":-128`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			msg := smsgateway.Message{
+				PhoneNumbers: []string{"1234567890"},
+				TextMessage:  &smsgateway.TextMessage{Text: "hi"},
+				Priority:     tt.priority,
+			}
+
+			got, err := json.Marshal(msg)
+			if err != nil {
+				t.Fatalf("Marshal() error = %v", err)
+			}
+
+			if !strings.Contains(string(got), tt.wantJSON) {
+				t.Errorf("Marshal() = %s, want to contain %s", got, tt.wantJSON)
+			}
+		})
+	}
+}
+
+func TestMessageState_MarshalScheduleAt(t *testing.T) {
+	scheduleAt := time.Date(2030, 9, 10, 12, 30, 45, 123456789, time.UTC)
+
+	t.Run("non-nil scheduleAt is emitted", func(t *testing.T) {
+		m := smsgateway.MessageState{
+			ID:         "id-1",
+			DeviceID:   "device-1",
+			State:      smsgateway.ProcessingStatePending,
+			Recipients: []smsgateway.RecipientState{{State: smsgateway.ProcessingStateSent}},
+			ScheduleAt: &scheduleAt,
+		}
+
+		got, err := json.Marshal(m)
+		if err != nil {
+			t.Fatalf("Marshal() error = %v", err)
+		}
+
+		want := scheduleAt.Format(time.RFC3339Nano)
+		if !strings.Contains(string(got), `"scheduleAt":"`+want+`"`) {
+			t.Errorf("Marshal() = %s, want to contain scheduleAt %q", got, want)
+		}
+	})
+
+	t.Run("nil scheduleAt is omitted", func(t *testing.T) {
+		m := smsgateway.MessageState{
+			ID:         "id-1",
+			DeviceID:   "device-1",
+			State:      smsgateway.ProcessingStatePending,
+			Recipients: []smsgateway.RecipientState{{State: smsgateway.ProcessingStateSent}},
+		}
+
+		got, err := json.Marshal(m)
+		if err != nil {
+			t.Fatalf("Marshal() error = %v", err)
+		}
+
+		if strings.Contains(string(got), "scheduleAt") {
+			t.Errorf("Marshal() = %s, want scheduleAt omitted when nil", got)
+		}
+	})
+}

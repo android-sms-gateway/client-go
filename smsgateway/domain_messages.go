@@ -139,7 +139,7 @@ type Message struct {
 
 	SimNumber          *uint8          `json:"simNumber,omitempty"          example:"1"    validate:"omitempty,min=1,max=3"`                  // SIM card number (1-3), if not set - default SIM will be used
 	WithDeliveryReport *bool           `json:"withDeliveryReport,omitempty" example:"true"`                                                   // With delivery report
-	Priority           MessagePriority `json:"priority,omitempty"           example:"0"    validate:"omitempty,min=-128,max=127" default:"0"` // Priority, messages with values greater than `99` will bypass limits and delays
+	Priority           MessagePriority `json:"priority"                     example:"0"    validate:"omitempty,min=-128,max=127" default:"0"` // Priority, messages with values greater than `99` will bypass limits and delays
 
 	TTL        *uint64    `json:"ttl,omitempty"        example:"86400"                validate:"omitempty,min=5"`                    // Time to live in seconds (conflicts with `ValidUntil`)
 	ValidUntil *time.Time `json:"validUntil,omitempty" example:"2020-01-01T00:00:00Z"                            format:"date-time"` // Valid until (conflicts with `TTL`)
@@ -240,6 +240,7 @@ type MessageState struct {
 	MmsMessage    *MmsMessage    `json:"mmsMessage,omitempty"`    // Present only when `includeContent=true` and the message type is mms.
 	HashedMessage *HashedMessage `json:"hashedMessage,omitempty"` // Hashed message content, if isHashed is true
 
+	ScheduleAt *time.Time `json:"scheduleAt,omitempty"` // Scheduled delivery time, if set
 }
 
 func (m MessageState) Validate() error {
