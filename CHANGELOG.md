@@ -10,6 +10,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 #### Message scheduling
 - **Added `Message.ValidUntilTime(now)`** — resolves the effective expiry of a message from `ValidUntil`, or from `TTL` computed against `now`, returning `nil` when neither is set.
 
+#### Inbox
+- **Inbox messages expose MMS attachments and encryption state** — `IncomingMessage` now includes `Attachments` (typed `InboxAttachment` entries with part ID, file name, size, and MIME type) and an `IsEncrypted` flag.
+- **New `inbox:read` JWT scope** — added `ScopeInboxRead` for read-only inbox access.
+- **Shared list filters for messages and inbox** — `ListInboxOptions` and `ListMessagesOptions` now embed `PaginationOptions` (`limit`, `offset`) and `DatePeriodOptions` (`from`, `to`), so both listings use the same typed filters.
+
 ### Bug Fixes
 - **`Message.Validate()` rejects impossible schedules** — a message whose `scheduleAt` is later than its effective expiry (`validUntil` or `ttl`) now fails validation with an error wrapping `ErrValidationFailed`.
 

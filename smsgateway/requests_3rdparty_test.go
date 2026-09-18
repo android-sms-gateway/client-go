@@ -190,7 +190,9 @@ func TestListInboxOptions_ToURLValues(t *testing.T) {
 		{
 			name: "Limit set",
 			options: smsgateway.ListInboxOptions{
-				Limit: ptr(10),
+				PaginationOptions: smsgateway.PaginationOptions{
+					Limit: ptr(10),
+				},
 			},
 			expected: url.Values{
 				"limit": {"10"},
@@ -199,7 +201,9 @@ func TestListInboxOptions_ToURLValues(t *testing.T) {
 		{
 			name: "Offset set",
 			options: smsgateway.ListInboxOptions{
-				Offset: ptr(20),
+				PaginationOptions: smsgateway.PaginationOptions{
+					Offset: ptr(20),
+				},
 			},
 			expected: url.Values{
 				"offset": {"20"},
@@ -208,7 +212,9 @@ func TestListInboxOptions_ToURLValues(t *testing.T) {
 		{
 			name: "From set",
 			options: smsgateway.ListInboxOptions{
-				From: &from,
+				DatePeriodOptions: smsgateway.DatePeriodOptions{
+					From: &from,
+				},
 			},
 			expected: url.Values{
 				"from": {from.Format(time.RFC3339)},
@@ -217,7 +223,9 @@ func TestListInboxOptions_ToURLValues(t *testing.T) {
 		{
 			name: "To set",
 			options: smsgateway.ListInboxOptions{
-				To: &to,
+				DatePeriodOptions: smsgateway.DatePeriodOptions{
+					To: &to,
+				},
 			},
 			expected: url.Values{
 				"to": {to.Format(time.RFC3339)},
@@ -235,11 +243,15 @@ func TestListInboxOptions_ToURLValues(t *testing.T) {
 		{
 			name: "All fields set",
 			options: smsgateway.ListInboxOptions{
-				Type:     ptr(smsgateway.IncomingMessageTypeSMS),
-				Limit:    ptr(50),
-				Offset:   ptr(10),
-				From:     &from,
-				To:       &to,
+				Type: ptr(smsgateway.IncomingMessageTypeSMS),
+				PaginationOptions: smsgateway.PaginationOptions{
+					Limit:  ptr(50),
+					Offset: ptr(10),
+				},
+				DatePeriodOptions: smsgateway.DatePeriodOptions{
+					From: &from,
+					To:   &to,
+				},
 				DeviceID: &deviceID,
 			},
 			expected: url.Values{
@@ -254,7 +266,9 @@ func TestListInboxOptions_ToURLValues(t *testing.T) {
 		{
 			name: "Limit zero",
 			options: smsgateway.ListInboxOptions{
-				Limit: ptr(0),
+				PaginationOptions: smsgateway.PaginationOptions{
+					Limit: ptr(0),
+				},
 			},
 			expected: url.Values{
 				"limit": {"0"},
@@ -263,7 +277,9 @@ func TestListInboxOptions_ToURLValues(t *testing.T) {
 		{
 			name: "Offset zero",
 			options: smsgateway.ListInboxOptions{
-				Offset: ptr(0),
+				PaginationOptions: smsgateway.PaginationOptions{
+					Offset: ptr(0),
+				},
 			},
 			expected: url.Values{
 				"offset": {"0"},
@@ -308,38 +324,48 @@ func TestListMessagesOptions_Validate(t *testing.T) {
 		{
 			name: "From before To",
 			options: smsgateway.ListMessagesOptions{
-				From: &from,
-				To:   &to,
+				DatePeriodOptions: smsgateway.DatePeriodOptions{
+					From: &from,
+					To:   &to,
+				},
 			},
 			wantErr: false,
 		},
 		{
 			name: "From after To",
 			options: smsgateway.ListMessagesOptions{
-				From: &to,
-				To:   &from,
+				DatePeriodOptions: smsgateway.DatePeriodOptions{
+					From: &to,
+					To:   &from,
+				},
 			},
 			wantErr: true,
 		},
 		{
 			name: "From equal to To",
 			options: smsgateway.ListMessagesOptions{
-				From: &from,
-				To:   &from,
+				DatePeriodOptions: smsgateway.DatePeriodOptions{
+					From: &from,
+					To:   &from,
+				},
 			},
 			wantErr: false,
 		},
 		{
 			name: "Only From set",
 			options: smsgateway.ListMessagesOptions{
-				From: &from,
+				DatePeriodOptions: smsgateway.DatePeriodOptions{
+					From: &from,
+				},
 			},
 			wantErr: false,
 		},
 		{
 			name: "Only To set",
 			options: smsgateway.ListMessagesOptions{
-				To: &to,
+				DatePeriodOptions: smsgateway.DatePeriodOptions{
+					To: &to,
+				},
 			},
 			wantErr: false,
 		},
@@ -384,7 +410,9 @@ func TestListMessagesOptions_ToURLValues(t *testing.T) {
 		{
 			name: "From set",
 			options: smsgateway.ListMessagesOptions{
-				From: &from,
+				DatePeriodOptions: smsgateway.DatePeriodOptions{
+					From: &from,
+				},
 			},
 			expected: url.Values{
 				"from": {from.Format(time.RFC3339)},
@@ -393,7 +421,9 @@ func TestListMessagesOptions_ToURLValues(t *testing.T) {
 		{
 			name: "To set",
 			options: smsgateway.ListMessagesOptions{
-				To: &to,
+				DatePeriodOptions: smsgateway.DatePeriodOptions{
+					To: &to,
+				},
 			},
 			expected: url.Values{
 				"to": {to.Format(time.RFC3339)},
@@ -420,7 +450,9 @@ func TestListMessagesOptions_ToURLValues(t *testing.T) {
 		{
 			name: "Limit set",
 			options: smsgateway.ListMessagesOptions{
-				Limit: ptr(25),
+				PaginationOptions: smsgateway.PaginationOptions{
+					Limit: ptr(25),
+				},
 			},
 			expected: url.Values{
 				"limit": {"25"},
@@ -429,7 +461,9 @@ func TestListMessagesOptions_ToURLValues(t *testing.T) {
 		{
 			name: "Offset set",
 			options: smsgateway.ListMessagesOptions{
-				Offset: ptr(5),
+				PaginationOptions: smsgateway.PaginationOptions{
+					Offset: ptr(5),
+				},
 			},
 			expected: url.Values{
 				"offset": {"5"},
@@ -474,12 +508,16 @@ func TestListMessagesOptions_ToURLValues(t *testing.T) {
 		{
 			name: "All fields set",
 			options: smsgateway.ListMessagesOptions{
-				From:           &from,
-				To:             &to,
-				State:          &state,
-				DeviceID:       &deviceID,
-				Limit:          ptr(100),
-				Offset:         ptr(0),
+				DatePeriodOptions: smsgateway.DatePeriodOptions{
+					From: &from,
+					To:   &to,
+				},
+				State:    &state,
+				DeviceID: &deviceID,
+				PaginationOptions: smsgateway.PaginationOptions{
+					Limit:  ptr(100),
+					Offset: ptr(0),
+				},
 				IncludeContent: ptr(true),
 				Sort:           ptr(smsgateway.CreatedAtDescending),
 			},
