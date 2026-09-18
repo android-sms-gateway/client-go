@@ -31,9 +31,10 @@ A typed Go client for the [SMSGate](https://sms-gate.app) API: send and track SM
 
 ## ⭐ Features
 
-- Text, data, and MMS messages with attachment support, priority, TTL, delivery reports, and scheduling
+- Text, data, and MMS messages with attachment support, priority, TTL, delivery reports, delayed delivery (`scheduleAt`), and effective-expiry resolution (`Message.ValidUntilTime`)
 - Per-message and per-recipient state tracking, listing, filtering, and cancellation
-- Inbox listing with pagination, inbox refresh, and webhook-based export
+- Inbox listing and refresh with pagination, MMS attachment metadata, an encryption flag, webhook delivery modes, and webhook-based export
+- Shared `PaginationOptions` and `DatePeriodOptions` filters for message and inbox listings
 - Device management, health checks, logs, and device settings (get, patch, replace)
 - Webhook registration with typed event constants and payload types
 - JWT token lifecycle: generate, refresh, and revoke with scopes and TTL
@@ -103,7 +104,7 @@ func main() {
 
 ## 💻 Usage
 
-Beyond sending, the client covers message listing and cancellation, inbox listing and refresh, device management, health checks, logs, settings (get, patch, replace), webhooks, and the full token lifecycle. See [smsgateway/client.go](https://github.com/android-sms-gateway/client-go/blob/master/smsgateway/client.go) for the complete method list with signatures, and the CA client in [ca/client.go](https://github.com/android-sms-gateway/client-go/blob/master/ca/client.go). API failures are wrapped in sentinel errors from the `rest` package; classify them with `errors.Is`.
+Beyond sending, the client covers message listing and cancellation, inbox listing and refresh, device management, health checks, logs, settings (get, patch, replace), webhooks, and the full token lifecycle. Inbox messages expose MMS attachment metadata and an encryption flag, and both message and inbox listings accept the same typed `PaginationOptions` and `DatePeriodOptions` filters. See [smsgateway/client.go](https://github.com/android-sms-gateway/client-go/blob/master/smsgateway/client.go) for the complete method list with signatures, and the CA client in [ca/client.go](https://github.com/android-sms-gateway/client-go/blob/master/ca/client.go). API failures are wrapped in sentinel errors from the `rest` package; classify them with `errors.Is`.
 
 ## 📖 API Reference
 
