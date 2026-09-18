@@ -31,9 +31,9 @@ A typed Go client for the [SMSGate](https://sms-gate.app) API: send and track SM
 
 ## ⭐ Features
 
-- Text, data, and MMS messages with attachment support, priority, TTL, delivery reports, and scheduling
+- Text, data, and MMS messages with attachment support, priority, TTL, delivery reports, and delayed delivery
 - Per-message and per-recipient state tracking, listing, filtering, and cancellation
-- Inbox listing with pagination, inbox refresh, and webhook-based export
+- Inbox listing and refresh with pagination, MMS attachment metadata, an encryption flag, webhook delivery modes, and webhook-based export
 - Device management, health checks, logs, and device settings (get, patch, replace)
 - Webhook registration with typed event constants and payload types
 - JWT token lifecycle: generate, refresh, and revoke with scopes and TTL
