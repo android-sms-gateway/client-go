@@ -103,7 +103,7 @@ func TestJWTClient_Send(t *testing.T) {
 		path:          "/messages",
 		authorization: "Bearer " + password,
 		contentType:   "application/json",
-		body:          `{"textMessage":{"text":"Hello World!"},"phoneNumbers":["+1234567890"]}`,
+		body:          `{"textMessage":{"text":"Hello World!"},"phoneNumbers":["+1234567890"],"priority":0}`,
 	}, mockServerOutput{
 		code: http.StatusCreated,
 		body: `{}`,
@@ -265,7 +265,7 @@ func TestClient_Send(t *testing.T) {
 				method:      http.MethodPost,
 				path:        "/messages",
 				contentType: "application/json",
-				body:        `{"textMessage":{"text":"Hello World!"},"phoneNumbers":["+1234567890"]}`,
+				body:        `{"textMessage":{"text":"Hello World!"},"phoneNumbers":["+1234567890"],"priority":0}`,
 				query:       tt.query,
 			}, mockServerOutput{
 				code: http.StatusCreated,
