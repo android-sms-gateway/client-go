@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.17.0] - 2026-10-01
+
+### New Features
+#### Message states
+- **Added `MessageState.CreatedAt`** — message state DTOs now carry the gateway-side creation timestamp (`createdAt`), decoded and round-tripped from the response. The server populates it after it upgrades to this client-go version.
+
+## [1.16.2] - 2026-09-29
+
+### New Features
+#### Message states
+- **Added `MessageState.ScheduleAt`** — message state responses now report the scheduled delivery time when the message has one.
+
+### Breaking Changes
+- **`Message.Priority` is always serialized** — `omitempty` was dropped from the `priority` JSON field, so every outgoing message body now carries `priority` (`0` by default). SDKs and fixtures that mirror the Go wire body byte-for-byte must emit the field.
+
+## [1.16.1] - 2026-09-28
+
 ### New Features
 #### Device public-key metadata
 - **Added versioned public-key DTOs** — `VersionedPublicKey` adds optional base64 `PublicKey` and `KeyVersion` fields to `Device` and mobile request DTOs; `MobileUpdateRequest` receives them through its embedded `MobileRegisterRequest`.
