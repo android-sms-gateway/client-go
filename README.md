@@ -177,10 +177,6 @@ if err != nil {
 log.Printf("loaded %d of %d messages", len(messages), total)
 ```
 
-`RefreshInbox` supports disabled, individual, and batch webhook delivery. `ExportInbox`, `MessagesExportRequest`, and `TriggerWebhooks` are deprecated in favor of the newer inbox API.
-
-The `ca` client exposes `PostCSR` and `GetCSRStatus`. The `smsgateway/webhooks` package is retained for compatibility; new code should use the webhook types in the `smsgateway` package.
-
 ## Configuration
 
 ### `smsgateway.Config`
