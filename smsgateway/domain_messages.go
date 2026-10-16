@@ -253,7 +253,7 @@ func (m *Message) Validate() error {
 type MessageState struct {
 	ID          string               `json:"id"          validate:"required,max=36"     example:"PyDmBQZZXYmyxMwED8Fzy"`                    // Message ID
 	DeviceID    string               `json:"deviceId"    validate:"required,max=21"     example:"PyDmBQZZXYmyxMwED8Fzy"`                    // Device ID
-	CreatedAt   time.Time            `json:"createdAt"                                  example:"2020-01-01T00:00:00Z"  format:"date-time"` // Message creation time
+	CreatedAt   time.Time            `json:"createdAt"   validate:"required"            example:"2020-01-01T00:00:00Z"  format:"date-time"` // Message creation time
 	State       ProcessingState      `json:"state"       validate:"required"            example:"Pending"`                                  // State
 	IsHashed    bool                 `json:"isHashed"                                   example:"false"`                                    // Hashed
 	IsEncrypted bool                 `json:"isEncrypted"                                example:"false"`                                    // Encrypted
