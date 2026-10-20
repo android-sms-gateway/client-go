@@ -8,10 +8,10 @@ import (
 	"github.com/android-sms-gateway/client-go/ca"
 )
 
-//nolint:gochecknoglobals // constant
 var customHTTPClient = &http.Client{}
 
 func TestConfig_Client(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		option ca.Option
@@ -30,6 +30,7 @@ func TestConfig_Client(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			c := ca.Config{}
 			tt.option(&c)
 
@@ -41,6 +42,7 @@ func TestConfig_Client(t *testing.T) {
 }
 
 func TestConfig_BaseURL(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		option ca.Option
@@ -59,6 +61,7 @@ func TestConfig_BaseURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			c := ca.Config{}
 			tt.option(&c)
 

@@ -12,6 +12,7 @@ import (
 )
 
 func TestSendOptions_ToURLValues(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		options  []smsgateway.SendOption
@@ -93,6 +94,7 @@ func TestSendOptions_ToURLValues(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			options := &smsgateway.SendOptions{}
 			options.Apply(tt.options...)
 
@@ -106,6 +108,7 @@ func TestSendOptions_ToURLValues(t *testing.T) {
 }
 
 func TestSendOptions_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		options *smsgateway.SendOptions
@@ -155,6 +158,7 @@ func TestSendOptions_Validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			err := tt.options.Validate()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
@@ -164,6 +168,7 @@ func TestSendOptions_Validate(t *testing.T) {
 }
 
 func TestListInboxOptions_ToURLValues(t *testing.T) {
+	t.Parallel()
 	from := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	to := time.Date(2024, 12, 31, 23, 59, 59, 0, time.UTC)
 	deviceID := "abc123def456ghi789j"
@@ -318,6 +323,7 @@ func TestListInboxOptions_ToURLValues(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			result := tt.options.ToURLValues()
 
 			if !reflect.DeepEqual(result, tt.expected) {
@@ -328,6 +334,7 @@ func TestListInboxOptions_ToURLValues(t *testing.T) {
 }
 
 func TestListMessagesOptions_Validate(t *testing.T) {
+	t.Parallel()
 	from := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	to := time.Date(2024, 12, 31, 23, 59, 59, 0, time.UTC)
 
@@ -393,6 +400,7 @@ func TestListMessagesOptions_Validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			err := tt.options.Validate()
 
 			if tt.wantErr {
@@ -412,6 +420,7 @@ func TestListMessagesOptions_Validate(t *testing.T) {
 }
 
 func TestListMessagesOptions_ToURLValues(t *testing.T) {
+	t.Parallel()
 	from := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	to := time.Date(2024, 12, 31, 23, 59, 59, 0, time.UTC)
 	state := "Sent"
@@ -556,6 +565,7 @@ func TestListMessagesOptions_ToURLValues(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			result := tt.options.ToURLValues()
 
 			if !reflect.DeepEqual(result, tt.expected) {

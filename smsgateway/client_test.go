@@ -98,6 +98,7 @@ func newJWTClient(baseURL string) *smsgateway.Client {
 }
 
 func TestJWTClient_Send(t *testing.T) {
+	t.Parallel()
 	server := newMockServer(mockServerExpectedInput{
 		method:        http.MethodPost,
 		path:          "/messages",
@@ -108,11 +109,12 @@ func TestJWTClient_Send(t *testing.T) {
 		code: http.StatusCreated,
 		body: `{}`,
 	})
-	defer server.Close()
+	t.Cleanup(server.Close)
 
 	client := newJWTClient(server.URL)
 
 	t.Run("Success", func(t *testing.T) {
+		t.Parallel()
 		message := smsgateway.Message{
 			TextMessage: &smsgateway.TextMessage{
 				Text: "Hello World!",
@@ -128,6 +130,7 @@ func TestJWTClient_Send(t *testing.T) {
 }
 
 func TestClient_Send(t *testing.T) {
+	t.Parallel()
 	type args struct {
 		ctx     context.Context
 		message smsgateway.Message
@@ -260,6 +263,7 @@ func TestClient_Send(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			// Create a new mock server for each test to validate query parameters
 			server := newMockServer(mockServerExpectedInput{
 				method:      http.MethodPost,
@@ -288,8 +292,10 @@ func TestClient_Send(t *testing.T) {
 }
 
 func TestClient_GetState(t *testing.T) {
+	t.Parallel()
 	// Test case 1: Successful request
 	t.Run("Successful request", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method: http.MethodGet,
 			path:   "/messages/123",
@@ -316,6 +322,7 @@ func TestClient_GetState(t *testing.T) {
 
 	// Test case 2: Error response
 	t.Run("Error response", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method: http.MethodGet,
 			path:   "/messages/123",
@@ -336,7 +343,9 @@ func TestClient_GetState(t *testing.T) {
 }
 
 func TestClient_ListWebhooks(t *testing.T) {
+	t.Parallel()
 	t.Run("Success", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method: http.MethodGet,
 			path:   "/webhooks",
@@ -368,6 +377,7 @@ func TestClient_ListWebhooks(t *testing.T) {
 	})
 
 	t.Run("Error response", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method: http.MethodGet,
 			path:   "/webhooks",
@@ -388,6 +398,7 @@ func TestClient_ListWebhooks(t *testing.T) {
 }
 
 func TestClient_RegisterWebhook(t *testing.T) {
+	t.Parallel()
 	server := newMockServer(mockServerExpectedInput{
 		method:      http.MethodPost,
 		path:        "/webhooks",
@@ -397,7 +408,7 @@ func TestClient_RegisterWebhook(t *testing.T) {
 		code: http.StatusCreated,
 		body: `{"id":"123","deviceId":null,"url":"https://example.com","event":"sms:delivered"}`,
 	})
-	defer server.Close()
+	t.Cleanup(server.Close)
 
 	client := newClient(server.URL)
 
@@ -440,6 +451,7 @@ func TestClient_RegisterWebhook(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got, err := tt.c.RegisterWebhook(context.Background(), tt.args.webhook)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Client.RegisterWebhook() error = %v, wantErr %v", err, tt.wantErr)
@@ -453,13 +465,14 @@ func TestClient_RegisterWebhook(t *testing.T) {
 }
 
 func TestClient_DeleteWebhook(t *testing.T) {
+	t.Parallel()
 	server := newMockServer(mockServerExpectedInput{
 		method: http.MethodDelete,
 		path:   "/webhooks/123",
 	}, mockServerOutput{
 		code: http.StatusNoContent,
 	})
-	defer server.Close()
+	t.Cleanup(server.Close)
 
 	client := newClient(server.URL)
 
@@ -491,6 +504,7 @@ func TestClient_DeleteWebhook(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			if err := tt.c.DeleteWebhook(context.Background(), tt.args.webhookID); (err != nil) != tt.wantErr {
 				t.Errorf("Client.DeleteWebhook() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -499,7 +513,9 @@ func TestClient_DeleteWebhook(t *testing.T) {
 }
 
 func TestClient_ListDevices(t *testing.T) {
+	t.Parallel()
 	t.Run("Success", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method: http.MethodGet,
 			path:   "/devices",
@@ -521,6 +537,7 @@ func TestClient_ListDevices(t *testing.T) {
 	})
 
 	t.Run("Error response", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method: http.MethodGet,
 			path:   "/devices",
@@ -539,13 +556,14 @@ func TestClient_ListDevices(t *testing.T) {
 }
 
 func TestClient_DeleteDevice(t *testing.T) {
+	t.Parallel()
 	server := newMockServer(mockServerExpectedInput{
 		method: http.MethodDelete,
 		path:   "/devices/123",
 	}, mockServerOutput{
 		code: http.StatusNoContent,
 	})
-	defer server.Close()
+	t.Cleanup(server.Close)
 
 	client := newClient(server.URL)
 
@@ -578,6 +596,7 @@ func TestClient_DeleteDevice(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			if err := tt.c.DeleteDevice(context.Background(), tt.args.deviceID); (err != nil) != tt.wantErr {
 				t.Errorf("Client.DeleteDevice() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -586,6 +605,7 @@ func TestClient_DeleteDevice(t *testing.T) {
 }
 
 func TestClient_CheckHealth(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		code    int
@@ -610,6 +630,7 @@ func TestClient_CheckHealth(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			server := newMockServer(mockServerExpectedInput{
 				method: http.MethodGet,
 				path:   "/health",
@@ -632,6 +653,7 @@ func TestClient_CheckHealth(t *testing.T) {
 }
 
 func TestClient_ExportInbox(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		req     smsgateway.MessagesExportRequest
@@ -658,6 +680,7 @@ func TestClient_ExportInbox(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			server := newMockServer(mockServerExpectedInput{
 				method:      http.MethodPost,
 				path:        "/inbox/export",
@@ -679,6 +702,7 @@ func TestClient_ExportInbox(t *testing.T) {
 }
 
 func TestClient_GetLogs(t *testing.T) {
+	t.Parallel()
 	from := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
 	to := time.Date(2023, 1, 2, 0, 0, 0, 0, time.UTC)
 	tests := []struct {
@@ -711,6 +735,7 @@ func TestClient_GetLogs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			server := newMockServer(mockServerExpectedInput{
 				method: http.MethodGet,
 				path:   "/logs",
@@ -738,6 +763,7 @@ func TestClient_GetLogs(t *testing.T) {
 }
 
 func TestClient_GetSettings(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		code    int
@@ -767,6 +793,7 @@ func TestClient_GetSettings(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			server := newMockServer(mockServerExpectedInput{
 				method: http.MethodGet,
 				path:   "/settings",
@@ -789,6 +816,7 @@ func TestClient_GetSettings(t *testing.T) {
 }
 
 func TestClient_UpdateSettings(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		settings smsgateway.DeviceSettings
@@ -829,6 +857,7 @@ func TestClient_UpdateSettings(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			server := newMockServer(mockServerExpectedInput{
 				method:      http.MethodPatch,
 				path:        "/settings",
@@ -853,6 +882,7 @@ func TestClient_UpdateSettings(t *testing.T) {
 }
 
 func TestClient_ReplaceSettings(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		settings smsgateway.DeviceSettings
@@ -893,6 +923,7 @@ func TestClient_ReplaceSettings(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			server := newMockServer(mockServerExpectedInput{
 				method:      http.MethodPut,
 				path:        "/settings",
@@ -917,6 +948,7 @@ func TestClient_ReplaceSettings(t *testing.T) {
 }
 
 func TestClient_GenerateToken(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		req     smsgateway.TokenRequest
@@ -950,6 +982,7 @@ func TestClient_GenerateToken(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			server := newMockServer(mockServerExpectedInput{
 				method:      http.MethodPost,
 				path:        "/auth/token",
@@ -974,6 +1007,7 @@ func TestClient_GenerateToken(t *testing.T) {
 }
 
 func TestClient_RefreshToken(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name         string
 		refreshToken string
@@ -1008,6 +1042,7 @@ func TestClient_RefreshToken(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			server := newMockServer(mockServerExpectedInput{
 				method:        http.MethodPost,
 				path:          "/auth/token/refresh",
@@ -1031,6 +1066,7 @@ func TestClient_RefreshToken(t *testing.T) {
 }
 
 func TestClient_RevokeToken(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		jti     string
@@ -1053,6 +1089,7 @@ func TestClient_RevokeToken(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			server := newMockServer(mockServerExpectedInput{
 				method: http.MethodDelete,
 				path:   "/auth/token/abc123",
@@ -1071,7 +1108,9 @@ func TestClient_RevokeToken(t *testing.T) {
 }
 
 func TestClient_ListInboxMessages(t *testing.T) {
+	t.Parallel()
 	t.Run("Success", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method: http.MethodGet,
 			path:   "/inbox",
@@ -1095,6 +1134,7 @@ func TestClient_ListInboxMessages(t *testing.T) {
 	})
 
 	t.Run("Success with X-Total-Count", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method: http.MethodGet,
 			path:   "/inbox",
@@ -1121,6 +1161,7 @@ func TestClient_ListInboxMessages(t *testing.T) {
 	})
 
 	t.Run("Success with filters", func(t *testing.T) {
+		t.Parallel()
 		msgType := smsgateway.IncomingMessageTypeSMS
 		limit := 10
 		offset := 5
@@ -1163,6 +1204,7 @@ func TestClient_ListInboxMessages(t *testing.T) {
 	})
 
 	t.Run("Error response", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method: http.MethodGet,
 			path:   "/inbox",
@@ -1180,6 +1222,7 @@ func TestClient_ListInboxMessages(t *testing.T) {
 	})
 
 	t.Run("Error response with body", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method: http.MethodGet,
 			path:   "/inbox",
@@ -1198,7 +1241,9 @@ func TestClient_ListInboxMessages(t *testing.T) {
 }
 
 func TestClient_RefreshInbox(t *testing.T) {
+	t.Parallel()
 	t.Run("Success", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method:      http.MethodPost,
 			path:        "/inbox/refresh",
@@ -1221,6 +1266,7 @@ func TestClient_RefreshInbox(t *testing.T) {
 	})
 
 	t.Run("Error response", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method:      http.MethodPost,
 			path:        "/inbox/refresh",
@@ -1245,7 +1291,9 @@ func TestClient_RefreshInbox(t *testing.T) {
 }
 
 func TestClient_ListMessages(t *testing.T) {
+	t.Parallel()
 	t.Run("Success", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method: http.MethodGet,
 			path:   "/messages",
@@ -1269,6 +1317,7 @@ func TestClient_ListMessages(t *testing.T) {
 	})
 
 	t.Run("Success with X-Total-Count", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method: http.MethodGet,
 			path:   "/messages",
@@ -1295,6 +1344,7 @@ func TestClient_ListMessages(t *testing.T) {
 	})
 
 	t.Run("Success with filters", func(t *testing.T) {
+		t.Parallel()
 		from := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 		to := time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)
 		state := "Pending"
@@ -1339,6 +1389,7 @@ func TestClient_ListMessages(t *testing.T) {
 	})
 
 	t.Run("Error response", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method: http.MethodGet,
 			path:   "/messages",
@@ -1356,6 +1407,7 @@ func TestClient_ListMessages(t *testing.T) {
 	})
 
 	t.Run("Error response with body", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method: http.MethodGet,
 			path:   "/messages",
@@ -1373,6 +1425,7 @@ func TestClient_ListMessages(t *testing.T) {
 	})
 
 	t.Run("Unauthorized", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method: http.MethodGet,
 			path:   "/messages",
@@ -1390,6 +1443,7 @@ func TestClient_ListMessages(t *testing.T) {
 	})
 
 	t.Run("Forbidden", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method: http.MethodGet,
 			path:   "/messages",
@@ -1407,6 +1461,7 @@ func TestClient_ListMessages(t *testing.T) {
 	})
 
 	t.Run("Not Implemented", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method: http.MethodGet,
 			path:   "/messages",
@@ -1424,6 +1479,7 @@ func TestClient_ListMessages(t *testing.T) {
 	})
 
 	t.Run("Corrupt JSON body", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method: http.MethodGet,
 			path:   "/messages",
@@ -1441,6 +1497,7 @@ func TestClient_ListMessages(t *testing.T) {
 	})
 
 	t.Run("Non-numeric X-Total-Count", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method: http.MethodGet,
 			path:   "/messages",
@@ -1461,6 +1518,7 @@ func TestClient_ListMessages(t *testing.T) {
 	})
 
 	t.Run("Network error", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method: http.MethodGet,
 			path:   "/messages",
@@ -1479,7 +1537,9 @@ func TestClient_ListMessages(t *testing.T) {
 }
 
 func TestClient_ListInboxMessages_Negative(t *testing.T) {
+	t.Parallel()
 	t.Run("Unauthorized", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method: http.MethodGet,
 			path:   "/inbox",
@@ -1497,6 +1557,7 @@ func TestClient_ListInboxMessages_Negative(t *testing.T) {
 	})
 
 	t.Run("Forbidden", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method: http.MethodGet,
 			path:   "/inbox",
@@ -1514,6 +1575,7 @@ func TestClient_ListInboxMessages_Negative(t *testing.T) {
 	})
 
 	t.Run("Not Implemented", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method: http.MethodGet,
 			path:   "/inbox",
@@ -1531,6 +1593,7 @@ func TestClient_ListInboxMessages_Negative(t *testing.T) {
 	})
 
 	t.Run("Corrupt JSON body", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method: http.MethodGet,
 			path:   "/inbox",
@@ -1548,6 +1611,7 @@ func TestClient_ListInboxMessages_Negative(t *testing.T) {
 	})
 
 	t.Run("Non-numeric X-Total-Count", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method: http.MethodGet,
 			path:   "/inbox",
@@ -1568,6 +1632,7 @@ func TestClient_ListInboxMessages_Negative(t *testing.T) {
 	})
 
 	t.Run("Network error", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method: http.MethodGet,
 			path:   "/inbox",
@@ -1586,6 +1651,7 @@ func TestClient_ListInboxMessages_Negative(t *testing.T) {
 }
 
 func TestClient_CancelMessage(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name      string
 		messageID string
@@ -1638,6 +1704,7 @@ func TestClient_CancelMessage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			server := newMockServer(mockServerExpectedInput{
 				method: http.MethodDelete,
 				path:   "/messages/" + tt.messageID,
@@ -1655,6 +1722,7 @@ func TestClient_CancelMessage(t *testing.T) {
 	}
 
 	t.Run("URL Encoding", func(t *testing.T) {
+		t.Parallel()
 		messageID := "msg/123"
 		encodedPath := "/messages/" + url.PathEscape(messageID)
 
@@ -1679,6 +1747,7 @@ func TestClient_CancelMessage(t *testing.T) {
 	})
 
 	t.Run("Network error", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method: http.MethodDelete,
 			path:   "/messages/msg_123",
@@ -1696,6 +1765,7 @@ func TestClient_CancelMessage(t *testing.T) {
 }
 
 func TestJWTClient_CancelMessage(t *testing.T) {
+	t.Parallel()
 	server := newMockServer(mockServerExpectedInput{
 		method:        http.MethodDelete,
 		path:          "/messages/msg_123",
@@ -1713,7 +1783,9 @@ func TestJWTClient_CancelMessage(t *testing.T) {
 }
 
 func TestClient_RefreshInbox_Negative(t *testing.T) {
+	t.Parallel()
 	t.Run("Bad Request", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method:      http.MethodPost,
 			path:        "/inbox/refresh",
@@ -1737,6 +1809,7 @@ func TestClient_RefreshInbox_Negative(t *testing.T) {
 	})
 
 	t.Run("Unauthorized", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method:      http.MethodPost,
 			path:        "/inbox/refresh",
@@ -1760,6 +1833,7 @@ func TestClient_RefreshInbox_Negative(t *testing.T) {
 	})
 
 	t.Run("Forbidden", func(t *testing.T) {
+		t.Parallel()
 		server := newMockServer(mockServerExpectedInput{
 			method:      http.MethodPost,
 			path:        "/inbox/refresh",

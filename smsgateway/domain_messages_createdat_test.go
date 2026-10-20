@@ -10,6 +10,7 @@ import (
 )
 
 func TestMessageState_JSON_Marshal_CreatedAt(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		createdAt  time.Time
@@ -34,6 +35,7 @@ func TestMessageState_JSON_Marshal_CreatedAt(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			m := smsgateway.MessageState{
 				ID:        "msg-1",
 				DeviceID:  "dev-1",
@@ -54,6 +56,7 @@ func TestMessageState_JSON_Marshal_CreatedAt(t *testing.T) {
 }
 
 func TestMessageState_JSON_Unmarshal_CreatedAt(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		jsonBody string
@@ -89,6 +92,7 @@ func TestMessageState_JSON_Unmarshal_CreatedAt(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			var m smsgateway.MessageState
 
 			err := json.Unmarshal([]byte(tt.jsonBody), &m)
@@ -111,6 +115,7 @@ func TestMessageState_JSON_Unmarshal_CreatedAt(t *testing.T) {
 }
 
 func TestMessageState_JSON_RoundTrip_CreatedAt(t *testing.T) {
+	t.Parallel()
 	original := smsgateway.MessageState{
 		ID:       "msg-1",
 		DeviceID: "dev-1",

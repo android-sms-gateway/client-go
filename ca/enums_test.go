@@ -7,6 +7,7 @@ import (
 )
 
 func TestIsValidCSRType(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		csrType ca.CSRType
@@ -36,6 +37,7 @@ func TestIsValidCSRType(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			if got := ca.IsValidCSRType(tt.csrType); got != tt.want {
 				t.Errorf("IsValidCSRType() = %v, want %v", got, tt.want)
 			}

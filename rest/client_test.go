@@ -63,8 +63,9 @@ func setupTestServer(t *testing.T) *httptest.Server {
 }
 
 func TestClient_Do(t *testing.T) {
+	t.Parallel()
 	httpServer := setupTestServer(t)
-	defer httpServer.Close()
+	t.Cleanup(httpServer.Close)
 
 	type fields struct {
 		config rest.Config
@@ -225,6 +226,7 @@ func TestClient_Do(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			c := rest.NewClient(tt.fields.config)
 			err := c.Do(tt.args.ctx, tt.args.method, tt.args.path, tt.args.headers, tt.args.payload, tt.args.response)
 

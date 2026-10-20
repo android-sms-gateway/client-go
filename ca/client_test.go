@@ -12,6 +12,7 @@ import (
 )
 
 func TestClient_PostCSR(t *testing.T) {
+	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/csr" {
 			w.WriteHeader(http.StatusNotFound)
@@ -41,7 +42,7 @@ func TestClient_PostCSR(t *testing.T) {
 			),
 		)
 	}))
-	defer server.Close()
+	t.Cleanup(server.Close)
 
 	client := ca.NewClient(ca.WithBaseURL(server.URL))
 
@@ -73,6 +74,7 @@ func TestClient_PostCSR(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got, err := client.PostCSR(context.Background(), tt.req)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Client.PostCSR() error = %v, wantErr %v", err, tt.wantErr)
@@ -86,6 +88,7 @@ func TestClient_PostCSR(t *testing.T) {
 }
 
 func TestClient_GetCSRStatus(t *testing.T) {
+	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/csr/123" {
 			w.WriteHeader(http.StatusNotFound)
@@ -106,7 +109,7 @@ func TestClient_GetCSRStatus(t *testing.T) {
 			),
 		)
 	}))
-	defer server.Close()
+	t.Cleanup(server.Close)
 
 	client := ca.NewClient(ca.WithBaseURL(server.URL))
 
@@ -137,6 +140,7 @@ func TestClient_GetCSRStatus(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got, err := client.GetCSRStatus(context.Background(), tt.req)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Client.GetCSRStatus() error = %v, wantErr %v", err, tt.wantErr)

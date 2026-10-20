@@ -7,6 +7,7 @@ import (
 )
 
 func TestDeviceSettings_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		settings smsgateway.DeviceSettings
@@ -72,6 +73,7 @@ func TestDeviceSettings_Validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			if err := tt.settings.Validate(); (err != nil) != tt.wantErr {
 				t.Errorf("DeviceSettings.Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -80,6 +82,7 @@ func TestDeviceSettings_Validate(t *testing.T) {
 }
 
 func TestSettingsMessages_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		messages smsgateway.SettingsMessages
@@ -257,6 +260,7 @@ func TestSettingsMessages_Validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			if err := tt.messages.Validate(); (err != nil) != tt.wantErr {
 				t.Errorf("SettingsMessages.Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}

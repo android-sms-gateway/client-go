@@ -9,6 +9,7 @@ import (
 
 // TestIsValidEventType tests the IsValidEventType function.
 func TestIsValidEventType(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		e    smsgateway.WebhookEvent
@@ -27,6 +28,7 @@ func TestIsValidEventType(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			if got := smsgateway.IsValidWebhookEvent(tt.e); got != tt.want {
 				t.Errorf("IsValid() = %v, want %v", got, tt.want)
 			}
@@ -37,6 +39,7 @@ func TestIsValidEventType(t *testing.T) {
 // TestWebhookEventTypes tests that the event types returned by
 // WebhookEventTypes are all valid.
 func TestWebhookEventTypes(t *testing.T) {
+	t.Parallel()
 	for _, v := range smsgateway.WebhookEventTypes() {
 		if !smsgateway.IsValidWebhookEvent(v) {
 			t.Errorf("event type %s is not valid", v)
@@ -46,6 +49,7 @@ func TestWebhookEventTypes(t *testing.T) {
 
 // TestWebhook_Validate tests the Validate method of the Webhook struct.
 func TestWebhook_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		webhook smsgateway.Webhook
@@ -160,6 +164,7 @@ func TestWebhook_Validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			err := tt.webhook.Validate()
 
 			// Check if an error was expected
