@@ -8,6 +8,7 @@ import (
 )
 
 func TestPostCSRRequest_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		request ca.PostCSRRequest
@@ -51,6 +52,7 @@ func TestPostCSRRequest_Validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			err := tt.request.Validate()
 
 			if tt.wantErr {

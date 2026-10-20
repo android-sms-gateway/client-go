@@ -16,6 +16,7 @@ type testCase struct {
 }
 
 func TestIsAPIError(t *testing.T) {
+	t.Parallel()
 	tests := []testCase{
 		{"API error", liberr.ErrAPIError, true},
 		{"Client error", liberr.ErrClient, true},
@@ -27,6 +28,7 @@ func TestIsAPIError(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			result := liberr.IsAPIError(tc.err)
 			if result != tc.expected {
 				t.Errorf("expected %v, got %v", tc.expected, result)
@@ -36,6 +38,7 @@ func TestIsAPIError(t *testing.T) {
 }
 
 func TestIsClientError(t *testing.T) {
+	t.Parallel()
 	tests := []testCase{
 		{"Client error", liberr.ErrClient, true},
 		{"Bad request", liberr.ErrBadRequest, true},
@@ -47,6 +50,7 @@ func TestIsClientError(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			result := liberr.IsClientError(tc.err)
 			if result != tc.expected {
 				t.Errorf("expected %v, got %v", tc.expected, result)
@@ -56,6 +60,7 @@ func TestIsClientError(t *testing.T) {
 }
 
 func TestIsServerError(t *testing.T) {
+	t.Parallel()
 	tests := []testCase{
 		{"Server error", liberr.ErrServer, true},
 		{"API error", liberr.ErrAPIError, false},
@@ -67,6 +72,7 @@ func TestIsServerError(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			result := liberr.IsServerError(tc.err)
 			if result != tc.expected {
 				t.Errorf("expected %v, got %v", tc.expected, result)
@@ -76,6 +82,7 @@ func TestIsServerError(t *testing.T) {
 }
 
 func TestIsConflict(t *testing.T) {
+	t.Parallel()
 	tests := []testCase{
 		{"Conflict", liberr.ErrConflict, true},
 		{"Client error", liberr.ErrClient, false},
@@ -87,6 +94,7 @@ func TestIsConflict(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			result := liberr.IsConflict(tc.err)
 			if result != tc.expected {
 				t.Errorf("expected %v, got %v", tc.expected, result)
@@ -96,6 +104,7 @@ func TestIsConflict(t *testing.T) {
 }
 
 func TestIsBadRequest(t *testing.T) {
+	t.Parallel()
 	tests := []testCase{
 		{"Bad request", liberr.ErrBadRequest, true},
 		{"Client error", liberr.ErrClient, false},
@@ -107,6 +116,7 @@ func TestIsBadRequest(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			result := liberr.IsBadRequest(tc.err)
 			if result != tc.expected {
 				t.Errorf("expected %v, got %v", tc.expected, result)

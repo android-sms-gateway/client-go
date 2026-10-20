@@ -12,6 +12,7 @@ import (
 )
 
 func TestMessage_GetTextMessage(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name         string
 		message      smsgateway.Message
@@ -50,6 +51,7 @@ func TestMessage_GetTextMessage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			result := tt.message.GetTextMessage()
 
 			if result == nil && tt.expectedText != nil {
@@ -69,6 +71,7 @@ func TestMessage_GetTextMessage(t *testing.T) {
 }
 
 func TestMessage_GetDataMessage(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name         string
 		message      smsgateway.Message
@@ -99,6 +102,7 @@ func TestMessage_GetDataMessage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			result := tt.message.GetDataMessage()
 
 			if result == nil && tt.expectedData != nil {
@@ -120,6 +124,7 @@ func TestMessage_GetDataMessage(t *testing.T) {
 }
 
 func TestMessage_GetMmsMessage(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		message     smsgateway.Message
@@ -148,6 +153,7 @@ func TestMessage_GetMmsMessage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			result := tt.message.GetMmsMessage()
 
 			if result == nil && tt.expectedMms != nil {
@@ -167,6 +173,7 @@ func TestMessage_GetMmsMessage(t *testing.T) {
 }
 
 func TestMmsMessage_Validate_NilReceiver(t *testing.T) {
+	t.Parallel()
 	var m *smsgateway.MmsMessage
 
 	if err := m.Validate(); err == nil {
@@ -175,6 +182,7 @@ func TestMmsMessage_Validate_NilReceiver(t *testing.T) {
 }
 
 func TestMessage_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		message smsgateway.Message
@@ -364,6 +372,7 @@ func TestMessage_Validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			err := tt.message.Validate()
 
 			if tt.err == nil {
@@ -384,6 +393,7 @@ func TestMessage_Validate(t *testing.T) {
 }
 
 func TestMmsMessage_MarshalFixture(t *testing.T) {
+	t.Parallel()
 	mms := smsgateway.MmsMessage{
 		Subject: ptr("Hello"),
 		Text:    ptr("World"),
@@ -409,6 +419,7 @@ func TestMmsMessage_MarshalFixture(t *testing.T) {
 }
 
 func TestMmsMessage_MarshalOmitEmptyAttachments(t *testing.T) {
+	t.Parallel()
 	mms := smsgateway.MmsMessage{
 		Subject: ptr("Hello"),
 		Text:    ptr("World"),
@@ -430,6 +441,7 @@ func TestMmsMessage_MarshalOmitEmptyAttachments(t *testing.T) {
 }
 
 func TestMmsMessage_RoundTrip(t *testing.T) {
+	t.Parallel()
 	original := smsgateway.MmsMessage{
 		Subject: ptr("Hello"),
 		Text:    ptr("World"),
@@ -458,6 +470,7 @@ func TestMmsMessage_RoundTrip(t *testing.T) {
 }
 
 func TestMmsMessage_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		message smsgateway.MmsMessage
@@ -508,6 +521,7 @@ func TestMmsMessage_Validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			err := tt.message.Validate()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
@@ -517,6 +531,7 @@ func TestMmsMessage_Validate(t *testing.T) {
 }
 
 func TestMessage_Validate_MmsMessage(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		message smsgateway.Message
@@ -582,6 +597,7 @@ func TestMessage_Validate_MmsMessage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			err := tt.message.Validate()
 
 			if tt.err == nil {
@@ -602,6 +618,7 @@ func TestMessage_Validate_MmsMessage(t *testing.T) {
 }
 
 func TestMessageState_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		states  map[string]time.Time
@@ -635,6 +652,7 @@ func TestMessageState_Validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			m := smsgateway.MessageState{
 				States: tt.states,
 			}
@@ -658,6 +676,7 @@ func TestMessageState_Validate(t *testing.T) {
 }
 
 func TestMessage_ValidUntilTime(t *testing.T) {
+	t.Parallel()
 	now := time.Date(2025, 6, 15, 12, 0, 0, 0, time.UTC)
 	validUntil := time.Date(2025, 6, 16, 12, 0, 0, 0, time.UTC)
 	zeroTime := time.Time{}
@@ -709,6 +728,7 @@ func TestMessage_ValidUntilTime(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got := tt.message.ValidUntilTime(tt.now)
 
 			if tt.wantNil {
@@ -731,6 +751,7 @@ func TestMessage_ValidUntilTime(t *testing.T) {
 }
 
 func TestMessage_Validate_ScheduleAtVsValidUntil(t *testing.T) {
+	t.Parallel()
 	textMessage := smsgateway.TextMessage{Text: "Hello World!"}
 	phoneNumbers := []string{"1234567890"}
 
@@ -816,6 +837,7 @@ func TestMessage_Validate_ScheduleAtVsValidUntil(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			err := tt.message.Validate()
 
 			if tt.err == nil {
@@ -836,6 +858,7 @@ func TestMessage_Validate_ScheduleAtVsValidUntil(t *testing.T) {
 }
 
 func TestMessage_MarshalPriority_AlwaysEmitted(t *testing.T) {
+	t.Parallel()
 	// Priority 0 must always appear in JSON (no omitempty).
 	// This ensures wire parity with Android app which always emits "priority":0.
 	tests := []struct {
@@ -872,6 +895,7 @@ func TestMessage_MarshalPriority_AlwaysEmitted(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			msg := smsgateway.Message{
 				PhoneNumbers: []string{"1234567890"},
 				TextMessage:  &smsgateway.TextMessage{Text: "hi"},
@@ -891,9 +915,11 @@ func TestMessage_MarshalPriority_AlwaysEmitted(t *testing.T) {
 }
 
 func TestMessageState_MarshalScheduleAt(t *testing.T) {
+	t.Parallel()
 	scheduleAt := time.Date(2030, 9, 10, 12, 30, 45, 123456789, time.UTC)
 
 	t.Run("non-nil scheduleAt is emitted", func(t *testing.T) {
+		t.Parallel()
 		m := smsgateway.MessageState{
 			ID:         "id-1",
 			DeviceID:   "device-1",
@@ -914,6 +940,7 @@ func TestMessageState_MarshalScheduleAt(t *testing.T) {
 	})
 
 	t.Run("nil scheduleAt is omitted", func(t *testing.T) {
+		t.Parallel()
 		m := smsgateway.MessageState{
 			ID:         "id-1",
 			DeviceID:   "device-1",

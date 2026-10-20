@@ -8,6 +8,7 @@ import (
 )
 
 func TestConfig_WithClient(t *testing.T) {
+	t.Parallel()
 	client := &http.Client{}
 	tests := []struct {
 		name     string
@@ -28,6 +29,7 @@ func TestConfig_WithClient(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			config := smsgateway.Config{}
 			result := config.WithClient(tt.client)
 
@@ -39,6 +41,7 @@ func TestConfig_WithClient(t *testing.T) {
 }
 
 func TestConfig_WithBaseURL(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		baseURL  string
@@ -58,6 +61,7 @@ func TestConfig_WithBaseURL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			config := smsgateway.Config{}
 			result := config.WithBaseURL(tt.baseURL)
 
@@ -69,6 +73,7 @@ func TestConfig_WithBaseURL(t *testing.T) {
 }
 
 func TestConfig_WithJWTAuth(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		token    string
@@ -88,6 +93,7 @@ func TestConfig_WithJWTAuth(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			config := smsgateway.Config{}
 			result := config.WithJWTAuth(tt.token)
 
@@ -99,6 +105,7 @@ func TestConfig_WithJWTAuth(t *testing.T) {
 }
 
 func TestConfig_WithBasicAuth(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		user     string
@@ -148,6 +155,7 @@ func TestConfig_WithBasicAuth(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			config := smsgateway.Config{}
 			result := config.WithBasicAuth(tt.user, tt.password)
 
@@ -162,6 +170,7 @@ func TestConfig_WithBasicAuth(t *testing.T) {
 }
 
 func TestConfig_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		config      smsgateway.Config
@@ -216,6 +225,7 @@ func TestConfig_Validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			err := tt.config.Validate()
 
 			if tt.expectError {
@@ -234,6 +244,7 @@ func TestConfig_Validate(t *testing.T) {
 }
 
 func TestConfig_Chaining(t *testing.T) {
+	t.Parallel()
 	// Test that methods can be chained together
 	customClient := &http.Client{}
 	config := smsgateway.Config{}.

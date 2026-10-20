@@ -7,6 +7,7 @@ import (
 )
 
 func TestInboxRefreshRequest_ResolveWebhookDelivery(t *testing.T) {
+	t.Parallel()
 	batch := smsgateway.WebhookDeliveryBatch
 	individual := smsgateway.WebhookDeliveryIndividual
 	disabled := smsgateway.WebhookDeliveryDisabled
@@ -45,6 +46,7 @@ func TestInboxRefreshRequest_ResolveWebhookDelivery(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			if got := tt.request.ResolveWebhookDelivery(); got != tt.want {
 				t.Errorf("ResolveWebhookDelivery() = %v, want %v", got, tt.want)
 			}
