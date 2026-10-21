@@ -31,6 +31,7 @@ The module contains three packages:
 			- [JWT Authentication](#jwt-authentication)
 	- [🚀 Quickstart](#-quickstart)
 	- [💻 Usage](#-usage)
+		- [Webhook Signature Verification](#webhook-signature-verification)
 	- [Configuration](#configuration)
 		- [`smsgateway.Config`](#smsgatewayconfig)
 		- [CA Client Options](#ca-client-options)
@@ -47,6 +48,7 @@ The module contains three packages:
 - Inbox listing and refresh with pagination, filters, MMS attachment metadata, encryption-state flags, and disabled, individual, or batch webhook delivery
 - Device listing and deletion, health checks, logs, and device settings with get, patch, and replace operations
 - Webhook registration with typed event constants and payload DTOs
+- Webhook payload signature verification for incoming webhook requests
 - JWT access-token generation, refresh, and revocation with scopes and TTL
 - Optional versioned public-key fields on device and mobile request DTOs for E2E key metadata
 - CSR submission and status retrieval through the `ca` package
@@ -176,6 +178,53 @@ if err != nil {
 }
 log.Printf("loaded %d of %d messages", len(messages), total)
 ```
+
+### Webhook Signature Verification
+
+SMSGate signs every webhook request with the device signing key. The signature is the
+hexadecimal HMAC-SHA256 digest of the raw request body followed by the `X-Timestamp` value,
+and it is sent in the `X-Signature` header.
+
+Verify the signature of an incoming request before parsing its body:
+
+```go
+func handler(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "cannot read body", http.StatusBadRequest)
+		return
+	}
+
+	signature := r.Header.Get(smsgateway.WebhookSignatureHeader)
+	timestamp := r.Header.Get(smsgateway.WebhookTimestampHeader)
+
+	if !smsgateway.VerifyWebhookSignature(signingKey, body, timestamp, signature) {
+		http.Error(w, "invalid signature", http.StatusUnauthorized)
+		return
+	}
+
+	// The body is authenticated, parse it.
+}
+```
+
+The body must be the bytes as received, before any JSON decoding. `VerifyWebhookSignature`
+rejects an empty signing key, an empty timestamp, a timestamp that is not a Unix timestamp in
+seconds, and a signature that does not match the body.
+
+To also reject replayed requests, use `VerifyWebhookSignatureWithin`, which requires the
+timestamp to be no more than `maxAge` away from the current time:
+
+```go
+if !smsgateway.VerifyWebhookSignatureWithin(signingKey, body, timestamp, signature, 5*time.Minute) {
+	http.Error(w, "invalid signature", http.StatusUnauthorized)
+	return
+}
+```
+
+The freshness check rejects requests older than `maxAge`, but a signed request replayed within
+that window still verifies — deduplicate events if repeated processing matters.
+
+The signing key is the value from **Settings → Webhooks → Signing Key** on the device.
 
 ## Configuration
 
