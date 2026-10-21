@@ -50,7 +50,12 @@ type MobilePostInboxRequestItemAttachment struct {
 	ContentType string `json:"contentType"    validate:"required,max=128" example:"image/jpeg"`
 	Name        string `json:"name"           validate:"required,max=512" example:"part001"`
 	Size        *int64 `json:"size,omitempty"                             example:"12345"`
-	Data        []byte `json:"data"           validate:"required"`
+	// Data is the attachment payload.
+	//
+	// The payload is the opaque envelope produced by the end-to-end encryption
+	// scheme of the device ($rsa-oaep-aes-256-gcm$v=1$k=...). It is NOT
+	// base64-encoded: the server stores and serves it verbatim.
+	Data string `json:"data" validate:"required" example:"$rsa-oaep-aes-256-gcm$v=1$k=1$AAAA$AAAA$AAAA"`
 }
 
 // MobilePostInboxRequestItem represents a single inbox message upload.
