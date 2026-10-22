@@ -15,6 +15,8 @@ const testAttachmentEnvelope = "$rsa-oaep-aes-256-gcm$v=1$k=1$QUFBQQ==$QUFBQQ==$
 // format of the inbox attachment payload: the encrypted envelope is sent
 // verbatim and is never base64-encoded.
 func TestMobilePostInboxRequest_AttachmentPayloadIsOpaqueString(t *testing.T) {
+	t.Parallel()
+
 	size := int64(102400)
 
 	req := smsgateway.MobilePostInboxRequest{
@@ -58,6 +60,8 @@ func TestMobilePostInboxRequest_AttachmentPayloadIsOpaqueString(t *testing.T) {
 // TestMobilePostInboxRequest_AttachmentPayloadIsNotDecoded pins that the
 // payload is opaque: a base64-looking value is kept as-is and never decoded.
 func TestMobilePostInboxRequest_AttachmentPayloadIsNotDecoded(t *testing.T) {
+	t.Parallel()
+
 	const payload = "SGVsbG8gV29ybGQh"
 
 	body := []byte(`[{"id":"msg-1","type":"MMS_DOWNLOADED","sender":"+79990001234",` +
