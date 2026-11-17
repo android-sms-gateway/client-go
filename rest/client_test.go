@@ -247,3 +247,85 @@ func TestClient_Do(t *testing.T) {
 		})
 	}
 }
+
+func TestClient_DoReturnsAPIError(t *testing.T) {
+	t.Parallel()
+
+	httpServer := setupTestServer(t)
+	t.Cleanup(httpServer.Close)
+
+	tests := []struct {
+		name         string
+		path         string
+		wantStatus   int
+		wantBody     string
+		wantMsg      string
+		wantSentinel error
+	}{
+		{
+			name:         "400 keeps upstream status and payload",
+			path:         "/400",
+			wantStatus:   http.StatusBadRequest,
+			wantBody:     "bad request",
+			wantMsg:      "api error: client error: validation failed: bad request",
+			wantSentinel: rest.ErrBadRequest,
+		},
+		{
+			name:         "404 keeps upstream status and payload",
+			path:         "/404",
+			wantStatus:   http.StatusNotFound,
+			wantBody:     "not found",
+			wantMsg:      "api error: client error: unexpected status code 404 with body not found",
+			wantSentinel: rest.ErrClient,
+		},
+		{
+			name:         "409 keeps upstream status and payload",
+			path:         "/409",
+			wantStatus:   http.StatusConflict,
+			wantBody:     "conflict",
+			wantMsg:      "api error: client error: conflict: conflict",
+			wantSentinel: rest.ErrConflict,
+		},
+		{
+			name:         "500 keeps upstream status and payload",
+			path:         "/500",
+			wantStatus:   http.StatusInternalServerError,
+			wantBody:     "internal server error",
+			wantMsg:      "api error: server error: unexpected status code 500 with body internal server error",
+			wantSentinel: rest.ErrServer,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			c := rest.NewClient(rest.Config{BaseURL: httpServer.URL})
+			err := c.Do(context.Background(), http.MethodGet, tt.path, nil, nil, nil)
+			if err == nil {
+				t.Fatalf("Do(%s) error = nil, want error", tt.path)
+			}
+
+			if !rest.IsAPIError(err) {
+				t.Errorf("IsAPIError(%v) = false, want true", err)
+			}
+
+			var apiErr *rest.APIError
+			if !errors.As(err, &apiErr) {
+				t.Fatalf("Do(%s) error type = %T, want *rest.APIError", tt.path, err)
+			}
+
+			if apiErr.StatusCode != tt.wantStatus {
+				t.Errorf("StatusCode = %d, want %d", apiErr.StatusCode, tt.wantStatus)
+			}
+			if string(apiErr.Body) != tt.wantBody {
+				t.Errorf("Body = %q, want %q", string(apiErr.Body), tt.wantBody)
+			}
+			if got := err.Error(); got != tt.wantMsg {
+				t.Errorf("Error() = %q, want %q", got, tt.wantMsg)
+			}
+			if !errors.Is(err, tt.wantSentinel) {
+				t.Errorf("errors.Is(%v) = false, want true", tt.wantSentinel)
+			}
+		})
+	}
+}
