@@ -16,6 +16,20 @@ var (
 	ErrConflict   = fmt.Errorf("%w: conflict", ErrClient)
 )
 
+type APIError struct {
+	StatusCode int
+	Body       []byte
+	err        error
+}
+
+func (e *APIError) Error() string {
+	return e.err.Error()
+}
+
+func (e *APIError) Unwrap() error {
+	return e.err
+}
+
 func IsAPIError(err error) bool {
 	return errors.Is(err, ErrAPIError)
 }

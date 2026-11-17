@@ -97,17 +97,19 @@ func (c *Client) do(
 }
 
 func (c *Client) formatError(statusCode int, body []byte) error {
-	switch statusCode {
-	case http.StatusBadRequest:
-		return fmt.Errorf("%w: %s", ErrBadRequest, string(body))
-	case http.StatusConflict:
-		return fmt.Errorf("%w: %s", ErrConflict, string(body))
+	var err error
+
+	switch {
+	case statusCode == http.StatusBadRequest:
+		err = fmt.Errorf("%w: %s", ErrBadRequest, string(body))
+	case statusCode == http.StatusConflict:
+		err = fmt.Errorf("%w: %s", ErrConflict, string(body))
+	case statusCode >= http.StatusInternalServerError:
+		err = fmt.Errorf("%w: unexpected status code %d with body %s", ErrServer, statusCode, string(body))
+	default:
+		// All other client errors (400-499)
+		err = fmt.Errorf("%w: unexpected status code %d with body %s", ErrClient, statusCode, string(body))
 	}
 
-	if statusCode >= http.StatusInternalServerError {
-		return fmt.Errorf("%w: unexpected status code %d with body %s", ErrServer, statusCode, string(body))
-	}
-
-	// All other client errors (400-499)
-	return fmt.Errorf("%w: unexpected status code %d with body %s", ErrClient, statusCode, string(body))
+	return &APIError{StatusCode: statusCode, Body: body, err: err}
 }
