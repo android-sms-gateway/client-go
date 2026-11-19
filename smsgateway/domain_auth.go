@@ -4,6 +4,7 @@ type JWTScope = string
 
 const (
 	ScopeDevicesList   JWTScope = "devices:list"
+	ScopeDevicesUpdate JWTScope = "devices:update"
 	ScopeDevicesDelete JWTScope = "devices:delete"
 
 	ScopeInboxList    JWTScope = "inbox:list"

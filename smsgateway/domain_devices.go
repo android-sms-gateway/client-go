@@ -2,6 +2,13 @@ package smsgateway
 
 import "time"
 
+type DeviceState string
+
+const (
+	DeviceStateActive   DeviceState = "Active"
+	DeviceStateDisabled DeviceState = "Disabled"
+)
+
 // VersionedPublicKey represents a public key for E2E encryption.
 type VersionedPublicKey struct {
 	PublicKey  *string `json:"publicKey,omitempty"  validate:"omitnil,base64,required_with=KeyVersion" example:"MIIBIjANBgkqh..."` // Base64-encoded RSA public key for E2E encryption (nullable)
@@ -19,6 +26,8 @@ type Device struct {
 	DeletedAt *time.Time `json:"deletedAt,omitempty" example:"2020-01-01T00:00:00Z"`  // Time at which the device was deleted, read only.
 
 	LastSeen time.Time `json:"lastSeen" example:"2020-01-01T00:00:00Z"` // Time at which the device was last seen, read only.
+
+	State DeviceState `json:"state" example:"Active"` // Device state, read only.
 
 	SimCards []SimCard `json:"simCards,omitempty"` // List of SIM cards in the device.
 }
