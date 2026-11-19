@@ -150,3 +150,7 @@ const (
 	CreatedAtAscending  MessagesSortOrder = "created_at"
 	CreatedAtDescending MessagesSortOrder = "-created_at"
 )
+
+type DeviceUpdateRequest struct {
+	State DeviceState `json:"state" validate:"required,oneof=Active Disabled" example:"Disabled"`
+}
