@@ -555,6 +555,53 @@ func TestClient_ListDevices(t *testing.T) {
 	})
 }
 
+func TestClient_UpdateDevice(t *testing.T) {
+	t.Parallel()
+
+	t.Run("Success", func(t *testing.T) {
+		t.Parallel()
+
+		server := newMockServer(mockServerExpectedInput{
+			method:      http.MethodPatch,
+			path:        "/devices/123",
+			contentType: "application/json",
+			body:        `{"state":"Disabled"}`,
+		}, mockServerOutput{
+			code: http.StatusNoContent,
+		})
+		defer server.Close()
+
+		client := newClient(server.URL)
+
+		if err := client.UpdateDevice(context.Background(), "123", smsgateway.DeviceUpdateRequest{
+			State: smsgateway.DeviceStateDisabled,
+		}); err != nil {
+			t.Fatalf("UpdateDevice failed: %v", err)
+		}
+	})
+
+	t.Run("Error response", func(t *testing.T) {
+		t.Parallel()
+
+		server := newMockServer(mockServerExpectedInput{
+			method: http.MethodPatch,
+			path:   "/devices/123",
+		}, mockServerOutput{
+			code: http.StatusNotFound,
+		})
+		defer server.Close()
+
+		client := newClient(server.URL)
+
+		err := client.UpdateDevice(context.Background(), "123", smsgateway.DeviceUpdateRequest{
+			State: smsgateway.DeviceStateActive,
+		})
+		if err == nil {
+			t.Errorf("Expected error, got nil")
+		}
+	})
+}
+
 func TestClient_DeleteDevice(t *testing.T) {
 	t.Parallel()
 	server := newMockServer(mockServerExpectedInput{

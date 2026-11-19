@@ -99,6 +99,17 @@ func (c *Client) ListDevices(ctx context.Context) ([]Device, error) {
 	return devices, nil
 }
 
+// UpdateDevice changes the state of a device.
+func (c *Client) UpdateDevice(ctx context.Context, id string, req DeviceUpdateRequest) error {
+	path := fmt.Sprintf("/devices/%s", url.PathEscape(id))
+
+	if err := c.Do(ctx, http.MethodPatch, path, c.headers, req, nil); err != nil {
+		return fmt.Errorf("failed to update device: %w", err)
+	}
+
+	return nil
+}
+
 // DeleteDevice removes a device by ID.
 func (c *Client) DeleteDevice(ctx context.Context, id string) error {
 	path := fmt.Sprintf("/devices/%s", url.PathEscape(id))
