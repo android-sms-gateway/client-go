@@ -77,3 +77,40 @@ func TestMobilePostInboxRequest_AttachmentPayloadIsNotDecoded(t *testing.T) {
 		t.Errorf("attachment payload = %q, want %q", got, payload)
 	}
 }
+
+// TestMobileRegisterRequest_PushTokenTypeWire pins the optional push token type
+// field that tells the server which FCM target field to use.
+func TestMobileRegisterRequest_PushTokenTypeWire(t *testing.T) {
+	t.Parallel()
+
+	tokenType := smsgateway.PushTokenTypeFID
+	token := "dBrXcnDSTrqUvA1agCcoxs"
+	req := smsgateway.MobileRegisterRequest{
+		VersionedPublicKey: smsgateway.VersionedPublicKey{
+			PublicKey:  nil,
+			KeyVersion: nil,
+		},
+		Name:          nil,
+		PushToken:     &token,
+		SimCards:      nil,
+		PushTokenType: &tokenType,
+	}
+
+	body, err := json.Marshal(req)
+	if err != nil {
+		t.Fatalf("failed to marshal request: %v", err)
+	}
+
+	if want := `"pushTokenType":"fid"`; !strings.Contains(string(body), want) {
+		t.Errorf("pushTokenType is not sent, want %s in %s", want, body)
+	}
+
+	var decoded smsgateway.MobileRegisterRequest
+	if err = json.Unmarshal(body, &decoded); err != nil {
+		t.Fatalf("failed to unmarshal request: %v", err)
+	}
+
+	if decoded.PushTokenType == nil || *decoded.PushTokenType != smsgateway.PushTokenTypeFID {
+		t.Errorf("pushTokenType round-trip = %v, want %q", decoded.PushTokenType, smsgateway.PushTokenTypeFID)
+	}
+}
