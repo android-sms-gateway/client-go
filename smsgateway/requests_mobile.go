@@ -2,6 +2,16 @@ package smsgateway
 
 import "time"
 
+// PushTokenType identifies the kind of value stored in pushToken.
+type PushTokenType string
+
+const (
+	// PushTokenTypeToken is a legacy FCM registration token.
+	PushTokenTypeToken PushTokenType = "token"
+	// PushTokenTypeFID is a Firebase Installation ID.
+	PushTokenTypeFID PushTokenType = "fid"
+)
+
 // MobileRegisterRequest represents a request to register a mobile device.
 type MobileRegisterRequest struct {
 	VersionedPublicKey
@@ -9,6 +19,10 @@ type MobileRegisterRequest struct {
 	Name      *string   `json:"name,omitempty"     validate:"omitempty,max=128" example:"Android Phone"`         // Name of the device (optional)
 	PushToken *string   `json:"pushToken"          validate:"omitempty,max=256" example:"gHz-T6NezDlOfllr7F-Be"` // FCM token of the device (optional)
 	SimCards  []SimCard `json:"simCards,omitempty"`                                                              // SIM cards (optional)
+
+	// PushTokenType tells the server which FCM target field to use for pushToken.
+	// Omitted means a legacy registration token.
+	PushTokenType *PushTokenType `json:"pushTokenType,omitempty" validate:"omitempty,oneof=token fid" example:"fid"`
 }
 
 // MobileUpdateRequest represents a request to update a mobile device.
